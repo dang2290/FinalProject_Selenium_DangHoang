@@ -1,0 +1,6 @@
+[
+  { "variant": "a", "case": "Email trống", "email": "" },
+  { "variant": "b", "case": "Thiếu @", "email": "abc" },
+  { "variant": "c", "case": "Thiếu phần sau @", "email": "abc@" },
+  { "variant": "d", "case": "Thiếu phần trước @", "email": "@auto.test" }
+]

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!-- NGUỒN DUY NHẤT của số luồng: thread-count (mặc định 5). -->
+<!-- configfailurepolicy="continue": lỗi ở @BeforeMethod/@AfterMethod của một test không làm bỏ qua các test còn lại. -->
+<suite name="AEC Automation Suite" parallel="methods" thread-count="5" data-provider-thread-count="5" configfailurepolicy="continue">
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+    </listeners>
+    <test name="Regression">
+        <packages>
+            <package name="com.aec.tests.*"/>
+        </packages>
+    </test>
+</suite>
