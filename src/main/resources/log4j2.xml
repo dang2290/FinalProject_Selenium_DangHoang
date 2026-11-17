@@ -6,7 +6,7 @@
         </File>
     </Appenders>
     <Loggers>
-        <Logger name="com.aec" level="info" additivity="false">
+        <Logger name="com.danghoang" level="info" additivity="false">
             <AppenderRef ref="FileAppender"/>
         </Logger>
         <Root level="warn">

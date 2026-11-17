@@ -150,7 +150,7 @@
 
 ### Automation đã có (04-11-2026)
 
-Selenium Java · `src/test/java/com/aec/tests/` — `ProductListTest` · `ProductCreateTest` · `ProductPriceVariantTest` · `ProductEditTest` · `DigitalBulkProductTest` (nền `ProductTestBase`). Label `testId` = TC ID. Mỗi sản phẩm test có Name chứa mã `TC<nnn><biến thể>_<epoch>_<hex>`; dọn sau mỗi test: sản phẩm số ở Digital Products, sản phẩm thường ở All products, đều qua hộp xác nhận. Sản phẩm có thể bị lưu tên rỗng (TC_053, TC_061) ghi id, khi dọn đổi tên về mã truy vết rồi xoá.
+Selenium Java · `src/test/java/com/danghoang/tests/` — `ProductListTest` · `ProductCreateTest` · `ProductPriceVariantTest` · `ProductEditTest` · `DigitalBulkProductTest` (nền `ProductTestBase`). Label `testId` = TC ID. Mỗi sản phẩm test có Name chứa mã `TC<nnn><biến thể>_<epoch>_<hex>`; dọn sau mỗi test: sản phẩm số ở Digital Products, sản phẩm thường ở All products, đều qua hộp xác nhận. Sản phẩm có thể bị lưu tên rỗng (TC_053, TC_061) ghi id, khi dọn đổi tên về mã truy vết rồi xoá.
 
 | Phạm vi | TC |
 |---|---|

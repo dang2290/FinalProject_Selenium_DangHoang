@@ -128,7 +128,7 @@ Không còn. 5 vùng ban đầu (TC_019, 030, 031b, 040c, 041b) đã quan sát t
 
 ### Automation đã có (04-11-2026)
 
-Selenium Java · `src/test/java/com/aec/tests/` — `AttributeListTest` · `AttributeCreateTest` · `AttributeEditTest` · `AttributeValueTest` · `AttributeLifecycleTest` (nền `AttributeTestBase`). Label `testId` = TC ID. Mỗi thuộc tính test mang mã `TC<nnn><biến thể>_<epoch>_<hex>`, tên ≤ 50 ký tự; dọn sau mỗi test: giá trị trước, thuộc tính sau, rồi danh mục test (TC_030).
+Selenium Java · `src/test/java/com/danghoang/tests/` — `AttributeListTest` · `AttributeCreateTest` · `AttributeEditTest` · `AttributeValueTest` · `AttributeLifecycleTest` (nền `AttributeTestBase`). Label `testId` = TC ID. Mỗi thuộc tính test mang mã `TC<nnn><biến thể>_<epoch>_<hex>`, tên ≤ 50 ký tự; dọn sau mỗi test: giá trị trước, thuộc tính sau, rồi danh mục test (TC_030).
 
 | Phạm vi | TC |
 |---|---|

@@ -8,7 +8,7 @@
     </listeners>
     <test name="Regression">
         <packages>
-            <package name="com.aec.tests.*"/>
+            <package name="com.danghoang.tests.*"/>
         </packages>
     </test>
 </suite>

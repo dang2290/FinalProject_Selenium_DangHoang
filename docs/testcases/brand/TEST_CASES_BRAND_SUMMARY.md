@@ -149,7 +149,7 @@
 
 ### Automation đã có (03-11-2026)
 
-Selenium Java · `src/test/java/com/aec/tests/` — `BrandTest` · `BrandEditTest` · `BrandValidationTest` · `BrandListTest`. Label `testId` = TC ID.
+Selenium Java · `src/test/java/com/danghoang/tests/` — `BrandTest` · `BrandEditTest` · `BrandValidationTest` · `BrandListTest`. Label `testId` = TC ID.
 
 | Phạm vi | TC |
 |---|---|

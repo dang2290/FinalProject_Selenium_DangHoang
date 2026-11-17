@@ -126,7 +126,7 @@ Không còn. 5 vùng ban đầu (TC_025, 029, 037, 048, 049b) đã quan sát th�
 
 ### Automation đã có (04-11-2026)
 
-Selenium Java · `src/test/java/com/aec/tests/` — `ColorListTest` · `ColorCreateTest` · `ColorEditTest` · `ColorLifecycleTest` (nền `ColorTestBase`). Label `testId` = TC ID. Mỗi màu test mang mã `TC<nnn><biến thể>_<epoch>_<hex>` trong Name (≤ 30 ký tự, không dấu cách); Color Code sinh ngẫu nhiên `#<a–f><5 hex>`. Dọn sau mỗi test: tìm theo mã → xoá qua hộp xác nhận. Màu có tên không chứa được mã (TC_015-a `Q`, TC_044-a payload 25 ký tự, TC_030 khi tên bị lưu rỗng) được xác định bằng **Color Code** ở các dòng đầu, ghi **id**, khi dọn đổi tên về mã truy vết rồi xoá.
+Selenium Java · `src/test/java/com/danghoang/tests/` — `ColorListTest` · `ColorCreateTest` · `ColorEditTest` · `ColorLifecycleTest` (nền `ColorTestBase`). Label `testId` = TC ID. Mỗi màu test mang mã `TC<nnn><biến thể>_<epoch>_<hex>` trong Name (≤ 30 ký tự, không dấu cách); Color Code sinh ngẫu nhiên `#<a–f><5 hex>`. Dọn sau mỗi test: tìm theo mã → xoá qua hộp xác nhận. Màu có tên không chứa được mã (TC_015-a `Q`, TC_044-a payload 25 ký tự, TC_030 khi tên bị lưu rỗng) được xác định bằng **Color Code** ở các dòng đầu, ghi **id**, khi dọn đổi tên về mã truy vết rồi xoá.
 
 | Phạm vi | TC |
 |---|---|

@@ -80,7 +80,7 @@ Toàn bộ output nằm trong `reports/` (đã `.gitignore`): `allure-results/`,
 
 ```text
 ├── pom.xml · testng.xml · .env.example · mvnw · .github/workflows/selenium.yml
-├── src/main/java/com/aec/
+├── src/main/java/com/danghoang/
 │   ├── config/ConfigReader.java       đọc cấu hình
 │   ├── drivers/DriverFactory.java     WebDriver theo thread
 │   ├── pages/                         Page Object: BasePage, StorefrontPage, LoginPage, CustomerLoginPage,
@@ -93,7 +93,7 @@ Toàn bộ output nằm trong `reports/` (đã `.gitignore`): `allure-results/`,
 │   │                                  StorefrontProductPage, StorefrontListingPage
 │   └── utils/                         WaitHelper, TestDataGenerator, ScreenshotUtil, JsonDataReader
 ├── src/main/resources/log4j2.xml      log ghi vào reports/logs/
-├── src/test/java/com/aec/
+├── src/test/java/com/danghoang/
 │   ├── base/BaseTest.java             mở/đóng driver, đính ảnh cuối mọi test, đăng nhập admin
 │   └── tests/                         AdminLoginTest, CustomerLoginTest, RegistrationTest,
 │                                      ForgotPasswordTest, SessionTest, BrandTestBase,

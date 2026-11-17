@@ -158,7 +158,7 @@
 
 ### Automation đã có (03-11-2026)
 
-Selenium Java · `src/test/java/com/aec/tests/` — `CategoryTest` · `CategoryFormTest` · `CategoryListTest` (nền `CategoryTestBase`). Label `testId` = TC ID. Mọi danh mục test mang mã `TC<nnn><biến thể>_<epoch>_<hex>`, tên ≤ 50 ký tự; dọn sau mỗi test, danh mục có Level lớn nhất xoá trước (cháu → con → cha). Không đụng 4541–4543 (PC-4).
+Selenium Java · `src/test/java/com/danghoang/tests/` — `CategoryTest` · `CategoryFormTest` · `CategoryListTest` (nền `CategoryTestBase`). Label `testId` = TC ID. Mọi danh mục test mang mã `TC<nnn><biến thể>_<epoch>_<hex>`, tên ≤ 50 ký tự; dọn sau mỗi test, danh mục có Level lớn nhất xoá trước (cháu → con → cha). Không đụng 4541–4543 (PC-4).
 
 | Phạm vi | TC |
 |---|---|
