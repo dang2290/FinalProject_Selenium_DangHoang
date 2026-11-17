@@ -338,6 +338,11 @@ public class ProductCreatePage extends BasePage {
         return driver.findElements(THUMBNAIL_PREVIEW).size();
     }
 
+    /** Tên tệp của ảnh Thumbnail đang xem trước (thuộc tính title của ô xem trước). */
+    public String thumbnailPreviewTitle() {
+        return driver.findElement(THUMBNAIL_PREVIEW).getAttribute("title");
+    }
+
     @Step("Chọn Video Provider {provider}")
     public void chooseVideoProvider(String provider) {
         new BootstrapSelect(driver, "video_provider").choose(provider);

@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.DigitalProductListPage;
 import com.aec.pages.LoginPage;
 import com.aec.pages.ProductCreatePage;
@@ -11,7 +12,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.Dimension;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -24,6 +24,8 @@ import java.util.List;
 @Feature("Product")
 @Story("Danh sách sản phẩm")
 public class ProductListTest extends ProductTestBase {
+
+    private static final String SELLER_WITHOUT_PRODUCTS = EnvReferenceData.get("sellerWithoutProducts");
 
     private static final List<String> ALL_HEADERS =
             List.of("", "Name", "Added By", "Info", "Total Stock", "Todays Deal", "Published", "Featured", "Options");
@@ -188,11 +190,11 @@ public class ProductListTest extends ProductTestBase {
         tc("AEC_PROD_TC_016", "regression", "product", "auth");
         ProductListPage list = openProductsAsAdmin();
 
-        Allure.step("Act: Chọn người bán Cam Tu", () -> list.filterBySeller("Cam Tu"));
+        Allure.step("Act: Chọn người bán " + SELLER_WITHOUT_PRODUCTS, () -> list.filterBySeller(SELLER_WITHOUT_PRODUCTS));
 
-        Allure.step("Assert: Nothing found, ô lọc giữ Cam Tu", () -> {
+        Allure.step("Assert: Nothing found, ô lọc giữ " + SELLER_WITHOUT_PRODUCTS, () -> {
             Assert.assertTrue(list.isNothingFoundShown(), "Phải hiện Nothing found");
-            Assert.assertEquals(list.sellerFilterText(), "Cam Tu", "Ô lọc người bán");
+            Assert.assertEquals(list.sellerFilterText(), SELLER_WITHOUT_PRODUCTS, "Ô lọc người bán");
         });
     }
 
@@ -249,15 +251,14 @@ public class ProductListTest extends ProductTestBase {
 
         switch (variant) {
             case "a" -> {
-                String original = driver().getWindowHandle();
+                String original = browser().currentHandle();
                 Allure.step("Act: Bấm nút View", () -> {
                     list.clickRowButtonAt(row, button);
                     list.switchToNewWindow(original);
                 });
                 Allure.step("Assert: Mở trang sản phẩm ngoài cửa hàng", () ->
                         Assert.assertTrue(list.currentPath().startsWith("/product/"), "Đường dẫn: " + list.currentUrl()));
-                driver().close();
-                driver().switchTo().window(original);
+                browser().closeTabAndSwitchTo(original);
             }
             case "b" -> Allure.step("Act + Assert: Bấm Edit mở Edit Product", () ->
                     Assert.assertTrue(list.editRow(row).isTitleDisplayed(), "Tiêu đề Edit Product"));
@@ -267,8 +268,9 @@ public class ProductListTest extends ProductTestBase {
                         Assert.assertEquals(list.deleteModalTitle(), "Delete Confirmation", "Tiêu đề hộp"));
                 Allure.step("Act: Bấm Cancel", () -> list.closeDeleteModal(ProductListPage.CloseBy.CANCEL));
             }
-            default -> Allure.step("Assert: Nút Duplicate không bấm (PC-4)", () ->
-                    Assert.assertEquals(list.rowButtonTitles(row).get(button), "Duplicate", "Nút thứ 3"));
+            default -> Allure.step("Assert: Nút Duplicate trỏ tới trang nhân bản đúng sản phẩm (không bấm — PC-4)", () ->
+                    Assert.assertTrue(list.duplicateUrlOfRow(row).endsWith("/admin/products/duplicate/" + list.idOfRow(row) + "?type=All"),
+                            "Đường dẫn nút Duplicate: " + list.duplicateUrlOfRow(row)));
         }
     }
 
@@ -286,7 +288,7 @@ public class ProductListTest extends ProductTestBase {
         Allure.parameter("Biến thể", variant + " — " + path);
         LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
             loginPage.waitForPath("/login");
@@ -351,7 +353,7 @@ public class ProductListTest extends ProductTestBase {
         ProductListPage list = new ProductListPage(driver());
 
         Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All products", () -> {
-            driver().manage().window().setSize(new Dimension(width, height));
+            browser().resize(width, height);
             list.open();
         });
 
@@ -366,7 +368,7 @@ public class ProductListTest extends ProductTestBase {
 
         Allure.step("Assert: Form tạo mở đủ các khối", () -> {
             ProductCreatePage form = new ProductCreatePage(driver()).open();
-            Assert.assertTrue(form.sectionTitles().size() >= 17, "Số khối của form: " + form.sectionTitles());
+            Assert.assertEquals(form.sectionTitles(), PRODUCT_FORM_SECTIONS, "Các khối của form ở " + width + "×" + height);
         });
     }
 }

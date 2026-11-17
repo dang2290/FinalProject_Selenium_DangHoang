@@ -2,6 +2,7 @@ package com.aec.base;
 
 import com.aec.config.ConfigReader;
 import com.aec.drivers.DriverFactory;
+import com.aec.pages.BrowserWindow;
 import com.aec.pages.DashboardPage;
 import com.aec.pages.LoginPage;
 import com.aec.utils.ScreenshotUtil;
@@ -21,6 +22,11 @@ public abstract class BaseTest {
 
     protected WebDriver driver() {
         return DriverFactory.getDriver();
+    }
+
+    /** Thao tác mức trình duyệt (điều hướng, tab, cửa sổ) — thân test dùng cái này thay vì gọi driver trực tiếp. */
+    protected BrowserWindow browser() {
+        return new BrowserWindow(driver());
     }
 
     @BeforeMethod(alwaysRun = true)

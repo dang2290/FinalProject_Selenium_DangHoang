@@ -24,6 +24,7 @@ public class BrandEditPage extends BasePage {
     private static final By META_DESCRIPTION_INPUT = By.cssSelector(EDIT_FORM + "textarea[name='meta_description']");
     private static final By SLUG_INPUT = By.id("slug");
     private static final By LOGO_PREVIEW_ITEMS = By.cssSelector(EDIT_FORM + ".file-preview-item");
+    private static final By LOGO_INPUT = By.cssSelector(EDIT_FORM + "input[name='logo']");
     private static final By SAVE_BUTTON = By.cssSelector(EDIT_FORM + "button[type='submit']");
     private static final By NOT_FOUND_HEADING = By.xpath("//h1[normalize-space()='Page Not Found!']");
     private static final By NOT_FOUND_TEXT = By.xpath("//p[contains(normalize-space(),'has not been found on our server')]");
@@ -105,7 +106,19 @@ public class BrandEditPage extends BasePage {
         return slug.isEnabled() && slug.getAttribute("readonly") == null;
     }
 
+    /**
+     * Ảnh xem trước của logo được dựng bằng AJAX sau khi trang tải (AIZ.uploader.previewGenerate) —
+     * ô logo đã có id ảnh thì chờ ảnh xem trước hiện rồi mới đếm, tránh đọc trúng lúc chưa dựng xong.
+     */
     public int logoPreviewCount() {
+        String logoId = driver.findElements(LOGO_INPUT).isEmpty() ? "" : driver.findElement(LOGO_INPUT).getAttribute("value");
+        if (logoId != null && !logoId.isBlank()) {
+            try {
+                wait.until(d -> !d.findElements(LOGO_PREVIEW_ITEMS).isEmpty());
+            } catch (org.openqa.selenium.TimeoutException e) {
+                log.warn("Ô logo có id {} nhưng không dựng được ảnh xem trước", logoId);
+            }
+        }
         return driver.findElements(LOGO_PREVIEW_ITEMS).size();
     }
 

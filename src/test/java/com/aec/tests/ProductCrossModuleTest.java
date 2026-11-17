@@ -117,7 +117,7 @@ public class ProductCrossModuleTest extends ProductTestBase {
             return new String[]{edit.nameValue(), edit.fieldValue("meta_title"), edit.selectedOptionText("brand_id")};
         });
 
-        String adminTab = driver().getWindowHandle();
+        String adminTab = browser().currentHandle();
         StorefrontProductPage storefront = Allure.step("Act: Ở All products bấm View", () -> {
             list.open();
             list.search(data.product());
@@ -150,7 +150,6 @@ public class ProductCrossModuleTest extends ProductTestBase {
             Assert.assertTrue(categoryPage.listsProduct(data.product()), "Trang danh mục phải có " + data.product());
         });
 
-        driver().close();
-        driver().switchTo().window(adminTab);
+        browser().closeTabAndSwitchTo(adminTab);
     }
 }

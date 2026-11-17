@@ -1,0 +1,10 @@
+{
+  "_ghiChu": "Dữ liệu CÓ SẴN trên môi trường cms.anhtester.com mà test dựa vào. Đổi môi trường hoặc dữ liệu bị người khác sửa thì cập nhật file này, không sửa code test.",
+  "sellerWithoutProducts": "Cam Tu",
+  "colorKeywordMultiPage": "blue",
+  "productCategory": "Sport shoes",
+  "productBrand": "MiuMiu",
+  "variantAttribute": "Metal",
+  "mediaKeyword": "brandimg",
+  "mediaFileName": "brandimg.png"
+}

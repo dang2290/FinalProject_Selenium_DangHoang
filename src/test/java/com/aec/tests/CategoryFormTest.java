@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.CategoryFormPage;
 import com.aec.pages.CategoryFormPage.ImageField;
 import com.aec.pages.CategoryListPage;
@@ -27,6 +28,8 @@ import static com.aec.utils.TestDataGenerator.padTo;
 @Feature("Manage Category")
 @Story("Form danh mục")
 public class CategoryFormTest extends CategoryTestBase {
+
+    private static final String MEDIA_KEYWORD = EnvReferenceData.get("mediaKeyword");
 
     private static final String SLUG_SUFFIX = "-[A-Za-z0-9]{5}$";
 
@@ -421,7 +424,7 @@ public class CategoryFormTest extends CategoryTestBase {
             form.openCreate();
             form.enterName(name);
             MediaLibraryModal modal = form.openLibrary(field);
-            modal.search("brandimg");
+            modal.search(MEDIA_KEYWORD);
             return modal;
         });
 

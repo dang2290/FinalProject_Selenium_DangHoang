@@ -10,7 +10,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.Dimension;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -308,7 +307,7 @@ public class AdminLoginTest extends BaseTest {
         LoginPage loginPage = new LoginPage(driver());
 
         Allure.step("Arrange: Đặt cửa sổ " + width + "×" + height, () ->
-                driver().manage().window().setSize(new Dimension(width, height)));
+                browser().resize(width, height));
 
         Allure.step("Act: Mở trang đăng nhập quản trị", () -> {
             loginPage.open();

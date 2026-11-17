@@ -181,8 +181,24 @@ public class CategoryFormPage extends BasePage {
         return driver.findElement(By.xpath(field.uploader() + "//div[contains(@class,'file-amount')]")).getText().trim();
     }
 
+    /**
+     * Số ảnh xem trước của ô. Ở form sửa, ảnh xem trước được dựng bằng AJAX sau khi trang tải xong —
+     * ô đã có id ảnh thì chờ ảnh dựng xong rồi mới đếm.
+     */
     public int previewCount(ImageField field) {
+        String imageId = driver.findElement(imageInput(field)).getAttribute("value");
+        if (imageId != null && !imageId.isBlank()) {
+            try {
+                wait.until(d -> !d.findElements(previewItems(field)).isEmpty());
+            } catch (org.openqa.selenium.TimeoutException e) {
+                log.warn("Ô {} có id {} nhưng không dựng được ảnh xem trước", field, imageId);
+            }
+        }
         return driver.findElements(previewItems(field)).size();
+    }
+
+    private By imageInput(ImageField field) {
+        return By.xpath(field.uploader() + "/input[@name='" + field.inputName + "']");
     }
 
     private By previewItems(ImageField field) {
@@ -303,7 +319,7 @@ public class CategoryFormPage extends BasePage {
     public void removePreview(ImageField field) {
         WebElement item = driver.findElement(previewItems(field));
         item.findElement(By.cssSelector(".remove-attachment")).click();
-        wait.until(d -> previewCount(field) == 0);
+        wait.until(d -> d.findElements(previewItems(field)).isEmpty());
     }
 
     /** Bấm Save — không chờ gì (dùng khi trình duyệt có thể chặn form). */

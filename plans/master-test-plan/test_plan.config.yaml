@@ -1,0 +1,179 @@
+# ==============================================================================
+# PHIẾU CẤU HÌNH MASTER TEST PLAN — điền rồi chạy /generate-master-test-plan
+# ------------------------------------------------------------------------------
+# • Chỉ điền phần SAU dấu hai chấm. Giữ nguyên tên ô, chú thích và thứ tự nhóm.
+# • Để trống = CHƯA CHỐT → plan ghi ❓ và đưa vào danh sách ô còn treo.
+#   Ghi `không` = ĐÃ QUYẾT ĐỊNH là không (không phải ô treo).
+# • Ngày viết DD-MM-YYYY (VD 17-09-2026) — 05-10-2026 là ngày 5 tháng 10.
+# • Giá trị có ": " hoặc " #" thì đặt trong ngoặc kép. Thụt lề bằng dấu cách, KHÔNG dùng Tab.
+# • 🔒 KHÔNG ghi URL có token, mật khẩu, API key vào phiếu này — chúng nằm ở `.env`.
+# • Thông tin suy ra được từ docs/ (module, nền tảng, độ phủ, năng lực QA…) agent tự đọc, không cần điền.
+# ==============================================================================
+
+# ── MỐC ─ BẮT BUỘC ─ PM / QA Lead ─────────────────────────────────────────────
+Mốc:
+  Tên: "Release 1.0 (tên tạm — chờ PM xác nhận)"
+  Mã mốc: release_1.0              # chữ thường, không dấu, nối `_` — dùng làm tên file plan và báo cáo
+  Phiên bản phần mềm:              # số build / version đang test
+  Hệ thống: []                     # repo một hệ thống → để trống. Nhiều hệ thống: ["CRM", "Book API"]
+
+# ── KIỂM SOÁT TÀI LIỆU ─ tuỳ chọn ─ QA Lead ──────────────────────────────────
+Kiểm soát tài liệu:
+  Người lập:                       # trống = người có vai trò `trưởng nhóm QA` ở nhóm Nhân lực
+  Người review: []                 # - { Tên: "...", Vai trò: "..." }
+  Mức phân loại:                   # công khai · nội bộ · mật
+
+# ── PHẠM VI ─ BẮT BUỘC ─ PM / PO ───────────────────────────────────────────────
+Phạm vi:
+  Trong phạm vi:                   # Module = prefix trong docs/requirements/README.md · Nền tảng ⊂ web · mobile · api
+    - { Module: LOGIN,  Nền tảng: [web], Ghi chú: "" }
+    - { Module: BRAND,  Nền tảng: [web], Ghi chú: "" }
+    - { Module: CAT,    Nền tảng: [web], Ghi chú: "" }
+    - { Module: ATTR,   Nền tảng: [web], Ghi chú: "" }
+    - { Module: COLOR,  Nền tảng: [web], Ghi chú: "" }
+    - { Module: PROD,   Nền tảng: [web], Ghi chú: "" }
+    - { Module: REVIEW, Nền tảng: [web], Ghi chú: "" }
+  Ngoài phạm vi bổ sung: []        # chỉ phần CHƯA có trong docs/
+                                   # - { Nội dung: "...", Lý do: "...", Người chịu trách nhiệm: "...", Người quyết định: "...", Ngày quyết định: "DD-MM-YYYY" }
+  Đưa lại REQ bị loại vì môi trường:   # có · không
+
+# ── LỊCH ─ tuỳ chọn ─ PM ──────────────────────────────────────────────────────
+Lịch:
+  Duyệt kế hoạch:                  # DD-MM-YYYY
+  Hoàn tất viết TC:
+  Môi trường sẵn sàng:
+  Bắt đầu thực thi:
+  Đóng băng mã nguồn:
+  Hồi quy từ:
+  Hồi quy đến:
+  Nghiệm thu từ:
+  Nghiệm thu đến:
+  Báo cáo tổng hợp:
+  Phát hành:
+  Tần suất báo cáo tiến độ:        # hằng ngày · hằng tuần · hai tuần
+  Ngày gửi báo cáo tiến độ:        # chữ tự do — VD "thứ Sáu"
+
+# ── NHÂN LỰC ─ tuỳ chọn ─ QA Lead ────────────────────────────────────────────
+Nhân lực: []                       # Vai trò ∈ trưởng nhóm QA · kiểm thử viên · tự động hoá · khác
+                                   # - { Tên: "...", Vai trò: kiểm thử viên, Phụ trách: ["BRAND × web"], Cần đào tạo: "" }
+Cần tuyển thêm người:              # có (kèm vị trí) · không
+
+# ── MÔI TRƯỜNG, DỮ LIỆU, CÔNG CỤ ─ tuỳ chọn ─ QA Lead / DevOps ───────────────
+Môi trường:
+  Tên:
+  Dùng chung với đội khác:         # có · không · trống = theo docs/requirements/README.md
+  Người dựng:
+  Trình duyệt: []                  # VD ["Chrome bản mới nhất"]
+  Thiết bị mobile: []
+
+Dữ liệu kiểm thử:
+  Dữ liệu nền:                     # mô tả dữ liệu có sẵn trên môi trường
+  Nguồn dữ liệu: []                # ⊂ tự sinh khi chạy · nạp sẵn · bản sao production đã che · nhập tay
+  Có dữ liệu thật của khách hàng:  # có · không
+  Cách che dữ liệu:                # chỉ khi có dữ liệu thật
+  Dọn dữ liệu sau khi chạy:        # có · không
+  Làm mới dữ liệu nền:
+  Người cung cấp:
+
+Công cụ:
+  Quản lý lỗi:                     # VD Jira · file trong repo (docs/bugs/)
+  Quản lý kết quả kiểm thử:
+  Nguồn chính khi lệch:
+  Tự động hoá:
+  Khác: []
+
+# ── CẤP ĐỘ, LOẠI, PHI CHỨC NĂNG, TỰ ĐỘNG HOÁ ─ tuỳ chọn ─ QA Lead ────────────
+Cấp độ kiểm thử:                   # Trong đợt: có · không · Tiêu chí riêng trống = dùng bộ chung mục 4
+  Thành phần:          { Trong đợt: , Ai thực hiện: "", Tiêu chí riêng: "" }
+  Tích hợp thành phần: { Trong đợt: , Ai thực hiện: "", Tiêu chí riêng: "" }
+  Hệ thống:            { Trong đợt: , Ai thực hiện: "", Tiêu chí riêng: "" }
+  Tích hợp hệ thống:   { Trong đợt: , Ai thực hiện: "", Tiêu chí riêng: "" }
+  Chấp nhận:           { Trong đợt: , Ai thực hiện: "", Tiêu chí riêng: "" }
+
+Độc lập kiểm thử:
+  Mức độ:                          # tác giả tự kiểm thử · đồng nghiệp cùng đội · đội QA riêng trong tổ chức · bên ngoài tổ chức
+  Ghi chú:
+
+Loại kiểm thử:                     # mỗi ô: có · không
+  Chức năng:
+  Hồi quy:
+  Kiểm thử lại lỗi:
+  Tích hợp liên module:
+  Tự động hoá:
+  Nghiệm thu (UAT):
+  Hiệu năng:
+  Bảo mật chuyên sâu:
+  Tương thích:
+  Khả năng truy cập:
+  Khả dụng:
+  Độ tin cậy và phục hồi:
+  Bên thực hiện nghiệm thu:
+  Cách chạy mobile:                # tự động hoá · kiểm thử viên tự chạy · ngoài phạm vi
+  Cách chạy API:                   # tự động hoá · kiểm thử viên tự chạy · ngoài phạm vi
+  Tỷ trọng thủ công / tự động:
+
+Phi chức năng: []                  # chỉ khai loại mà Loại kiểm thử ghi `có`
+                                   # - { Loại: hiệu năng, Mục tiêu đo: "...", Ngưỡng chấp nhận: "...", Cách làm: "...", Môi trường: "...", Ai thực hiện: "..." }
+
+Chiến lược tự động hoá:            # chỉ khi Loại kiểm thử → Tự động hoá: có
+  Mục tiêu:
+  Phạm vi tự động: []
+  Không tự động: []                # - { Nội dung: "...", Lý do: "..." }
+  Tầng kiểm thử:                   # tỷ trọng unit / API / UI
+  Tiêu chí chọn TC:
+  Kích hoạt chạy: []               # Khi nào ∈ mỗi commit · mỗi merge request · hằng đêm · mỗi build lên môi trường test · trước phát hành · chạy tay
+                                   # - { Bộ chạy: Smoke, Khi nào: mỗi build lên môi trường test, Môi trường: "..." }
+  Hệ thống CI:
+  Người bảo trì:
+
+# ── MỤC TIÊU ─ tuỳ chọn ─ PM / QA Lead (trống → agent đề xuất, chờ duyệt) ─────
+Mục tiêu: []
+
+# ── ƯỚC LƯỢNG & NGÂN SÁCH ─ tuỳ chọn ─ QA Lead / PM ──────────────────────────
+Ước lượng:
+  Kỹ thuật:                        # tỷ lệ · ngoại suy · Wideband Delphi · Planning Poker · ba điểm · không ước lượng
+  Tổng công sức (người-ngày):
+  Giả định:
+  Chi tiết ba điểm: []             # - { Hạng mục: "...", Lạc quan: 0, Khả năng nhất: 0, Bi quan: 0 }
+
+Ngân sách:
+  Có ngân sách riêng:              # có · không
+  Tổng:
+  Đơn vị tiền:
+  Hạng mục: []                     # - { Nội dung: "...", Số tiền: 0 }
+
+# ── QUẢN LÝ LỖI ─ tuỳ chọn ─ QA Lead / PM ────────────────────────────────────
+Quản lý lỗi:
+  Quy trình trạng thái:            # mặc định · riêng
+  Quy trình riêng:
+  Thang Severity:                  # mặc định · riêng
+  Thang Priority:                  # mặc định · riêng
+  Thang riêng: []                  # - { Loại: Severity, Mức: "...", Định nghĩa: "..." }
+  Người phân loại lỗi:
+  Họp phân loại lỗi:
+  Thời hạn xử lý: []               # - { Severity: Critical, Phản hồi: "...", Sửa xong: "..." }
+
+# ── TIÊU CHÍ ─ tuỳ chọn ─ PM ─────────────────────────────────────────────────
+Tiêu chí:
+  Bộ tiêu chí ra:                  # mặc định · riêng
+  Tiêu chí ra bổ sung: []          # - { Tiêu chí: "...", Ngưỡng: "..." }
+  Tiêu chí ra riêng: []
+  Người chấp nhận dừng khi hết thời gian hoặc ngân sách:
+  Dùng ngưỡng tạm dừng đề xuất:    # có · không
+  Ngưỡng tạm dừng riêng: []
+
+# ── BÊN LIÊN QUAN, MẪU, PHÊ DUYỆT, CHUẨN TỔ CHỨC ─ tuỳ chọn ─ PM ─────────────
+Bên liên quan: []                  # Nhận gì ⊂ kế hoạch · báo cáo tiến độ · báo cáo tổng hợp · báo cáo lỗi
+                                   # - { Tên: "...", Vai trò: "...", Nhận gì: [kế hoạch], Tần suất: "...", Kênh: "..." }
+
+Mẫu tài liệu:
+  Dùng mẫu có sẵn của repo:        # có · không
+  Mẫu riêng: []                    # - { Tài liệu: "...", Mẫu: "đường dẫn" }
+
+Phê duyệt: []                      # - { Tên: "...", Vai trò: "..." }
+
+Chuẩn tổ chức:
+  Mẫu của khách:                   # đường dẫn file — trống = cấu trúc mặc định
+  Có chính sách kiểm thử (Test Policy):    # có · không
+  Có chiến lược kiểm thử (Test Strategy):  # có · không
+  Điểm làm khác: []                # - { Nội dung: "...", Quy định chung: "...", Đợt này làm: "...", Lý do: "...", Người duyệt: "..." }

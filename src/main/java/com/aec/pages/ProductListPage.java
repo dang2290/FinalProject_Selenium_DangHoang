@@ -38,6 +38,7 @@ public class ProductListPage extends AdminListPage {
     private static final By BULK_ACTION = By.xpath("//button[contains(@class,'dropdown-toggle')][normalize-space()='Bulk Action']");
     private static final By DELETE_SELECTION = By.xpath("//a[contains(@class,'dropdown-item')][normalize-space()='Delete selection']");
     private static final By ROW_BUTTONS = By.cssSelector("td a.btn-circle");
+    private static final By ROW_DUPLICATE = By.cssSelector("a[title='Duplicate']");
     private static final By ROW_CHECKBOX = By.cssSelector("input.check-one");
     private static final By SIDEBAR_PRODUCTS = By.xpath("//a[contains(@class,'aiz-side-nav-link')][span[normalize-space()='Products']]");
 
@@ -201,6 +202,10 @@ public class ProductListPage extends AdminListPage {
         return rows().get(row).findElement(By.cssSelector("a[title='View']")).getAttribute("href");
     }
 
+    public String duplicateUrlOfRow(int row) {
+        return rows().get(row).findElement(ROW_DUPLICATE).getAttribute("href");
+    }
+
     public String idOfRow(int row) {
         return rows().get(row).findElement(ROW_EDIT).getAttribute("href").replaceAll(".*/admin/(\\d+)/edit.*", "$1");
     }
@@ -213,7 +218,7 @@ public class ProductListPage extends AdminListPage {
 
     @Step("Bấm nút Duplicate ở dòng {row} (đếm từ 0)")
     public void duplicateRow(int row) {
-        andWaitForNewPage(() -> clickRowButton(rows().get(row).findElement(By.cssSelector("a[title='Duplicate']"))));
+        andWaitForNewPage(() -> clickRowButton(rows().get(row).findElement(ROW_DUPLICATE)));
         if (!isServerErrorPage()) {
             waitUntilLoaded();
         }

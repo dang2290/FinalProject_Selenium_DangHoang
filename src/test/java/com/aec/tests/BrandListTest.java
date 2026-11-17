@@ -11,7 +11,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.Dimension;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -415,7 +414,7 @@ public class BrandListTest extends BrandTestBase {
         Allure.parameter("Biến thể", variant + " — " + path);
         LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
             loginPage.waitForPath("/login");
@@ -436,8 +435,8 @@ public class BrandListTest extends BrandTestBase {
 
         Allure.step("Act: Đăng xuất", () -> new DashboardPage(driver()).logout());
         Allure.step("Act: Bấm Back rồi tải lại trang", () -> {
-            driver().navigate().back();
-            driver().navigate().refresh();
+            browser().back();
+            browser().refresh();
         });
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
@@ -484,7 +483,7 @@ public class BrandListTest extends BrandTestBase {
         BrandPage brandPage = new BrandPage(driver());
 
         Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All Brands", () -> {
-            driver().manage().window().setSize(new Dimension(width, height));
+            browser().resize(width, height);
             brandPage.open();
         });
 

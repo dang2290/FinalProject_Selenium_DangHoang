@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.ProductCreatePage;
 import com.aec.pages.ProductCreatePage.SaveButton;
 import com.aec.pages.ProductEditPage;
@@ -22,6 +23,8 @@ import java.util.function.Consumer;
 @Feature("Product")
 @Story("Giá & biến thể")
 public class ProductPriceVariantTest extends ProductTestBase {
+
+    private static final String ATTRIBUTE = EnvReferenceData.get("variantAttribute");
 
     private static final String DISCOUNT_LT_10 = "The discount must be less than 10.";
 
@@ -289,11 +292,15 @@ public class ProductPriceVariantTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Assert: Ô chọn màu bị khoá", () ->
-                Assert.assertFalse(form.tryOpenColorSelect(), "Ô chọn màu không được mở ra"));
+        Allure.step("Assert: Ô chọn màu bị khoá", () -> {
+            Assert.assertTrue(form.isColorSelectDisabled(), "Ô chọn màu phải ở trạng thái disabled khi công tắc Colors tắt");
+            Assert.assertFalse(form.tryOpenColorSelect(), "Ô chọn màu không được mở ra");
+        });
         Allure.step("Act: Bật công tắc Colors", form::enableColors);
-        Allure.step("Assert: Ô mở ra, mọi màu có ô mẫu", () ->
-                Assert.assertTrue(form.colorListShowsSwatches(), "Danh sách màu phải có ô mẫu ở mọi mục"));
+        Allure.step("Assert: Ô mở ra, mọi màu có ô mẫu", () -> {
+            Assert.assertFalse(form.isColorSelectDisabled(), "Bật công tắc thì ô chọn màu phải hết disabled");
+            Assert.assertTrue(form.colorListShowsSwatches(), "Danh sách màu phải có ô mẫu ở mọi mục");
+        });
     }
 
     @Test(groups = {"regression", "product", "auth"}, description = "Chọn thuộc tính sinh ô giá trị")
@@ -304,10 +311,10 @@ public class ProductPriceVariantTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Chọn thuộc tính Metal", () -> form.chooseAttribute("Metal"));
+        Allure.step("Act: Chọn thuộc tính " + ATTRIBUTE, () -> form.chooseAttribute(ATTRIBUTE));
 
-        Allure.step("Assert: 1 dòng Metal với ô chọn nhiều giá trị", () -> {
-            Assert.assertEquals(form.attributeChoiceTitles(), List.of("Metal"), "Dòng thuộc tính");
+        Allure.step("Assert: 1 dòng " + ATTRIBUTE + " với ô chọn nhiều giá trị", () -> {
+            Assert.assertEquals(form.attributeChoiceTitles(), List.of(ATTRIBUTE), "Dòng thuộc tính");
             Assert.assertTrue(form.choiceValueSelectIsMultiple(), "Ô giá trị phải cho chọn nhiều");
         });
     }
@@ -320,10 +327,10 @@ public class ProductPriceVariantTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Chọn 2 màu và 2 giá trị Metal", () -> {
+        Allure.step("Act: Chọn 2 màu và 2 giá trị " + ATTRIBUTE, () -> {
             form.enableColors();
             form.chooseFirstColors(2);
-            form.chooseAttribute("Metal");
+            form.chooseAttribute(ATTRIBUTE);
             form.chooseFirstDistinctValues(2);
             form.waitForVariants(4);
         });
@@ -344,11 +351,11 @@ public class ProductPriceVariantTest extends ProductTestBase {
         tc("AEC_PROD_TC_052", "regression", "product", "auth");
         String name = "AutoProd_" + newToken("TC052");
         List<String> prices = List.of("10", "11", "12", "13");
-        ProductCreatePage form = submit(name, "2 màu × 2 giá trị Metal, giá từng dòng", f -> {
+        ProductCreatePage form = submit(name, "2 màu × 2 giá trị " + ATTRIBUTE + ", giá từng dòng", f -> {
             f.enableColors();
             f.chooseFirstColors(2);
-            f.chooseAttribute("Metal");
-            Allure.parameter("Giá trị Metal", String.join(", ", f.chooseFirstDistinctValues(2)));
+            f.chooseAttribute(ATTRIBUTE);
+            Allure.parameter("Giá trị " + ATTRIBUTE, String.join(", ", f.chooseFirstDistinctValues(2)));
             f.waitForVariants(4);
             f.enterVariantPrices(prices);
         });

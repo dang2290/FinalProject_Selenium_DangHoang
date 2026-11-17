@@ -13,7 +13,6 @@ import com.aec.utils.TestDataGenerator;
 import io.qameta.allure.Allure;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openqa.selenium.NoAlertPresentException;
 import org.testng.Assert;
 
 import java.util.ArrayList;
@@ -35,6 +34,11 @@ abstract class ProductTestBase extends BaseTest {
     protected static final String NAME_REQUIRED = "Product name is required";
     /** Chạy song song 5 luồng — sản phẩm vừa tạo chỉ chắc nằm trong vài dòng đầu. */
     protected static final int TOP_ROWS = 5;
+    /** Các khối của form Add New Product, đúng thứ tự trên trang. */
+    protected static final List<String> PRODUCT_FORM_SECTIONS = List.of("Product Information", "Product Images", "Product Videos",
+            "Product Variation", "Product price + stock", "Product Description", "PDF Specification", "SEO Meta Tags",
+            "Shipping Configuration", "Low Stock Quantity Warning", "Stock Visibility State", "Cash on Delivery", "Featured",
+            "Todays Deal", "Flash Deal", "Estimate Shipping Time", "Vat & TAX");
 
     private static final Logger LOG = LogManager.getLogger(ProductTestBase.class);
     private final ThreadLocal<List<String>> tokens = ThreadLocal.withInitial(ArrayList::new);
@@ -176,7 +180,7 @@ abstract class ProductTestBase extends BaseTest {
     }
 
     private void renameProduct(String id, String token) {
-        driver().get(config.getBaseUrl() + "/admin/products/admin/" + id + "/edit?lang=en");
+        browser().openPath("/admin/products/admin/" + id + "/edit?lang=en");
         ProductEditPage edit = new ProductEditPage(driver());
         if (edit.isPageNotFound() || !edit.isTitleDisplayed()) {
             return;
@@ -186,7 +190,7 @@ abstract class ProductTestBase extends BaseTest {
     }
 
     private void renameDigital(String id, String token) {
-        driver().get(config.getBaseUrl() + "/admin/digitalproducts/edit/" + id + "?lang=en");
+        browser().openPath("/admin/digitalproducts/edit/" + id + "?lang=en");
         DigitalProductFormPage edit = new DigitalProductFormPage(driver());
         if (edit.isPageNotFound() || !edit.isEditTitleDisplayed()) {
             return;
@@ -204,10 +208,6 @@ abstract class ProductTestBase extends BaseTest {
     }
 
     private void dismissAlertIfOpen() {
-        try {
-            driver().switchTo().alert().dismiss();
-        } catch (NoAlertPresentException e) {
-            LOG.debug("Không có hộp thoại cần đóng");
-        }
+        browser().dismissAlertIfOpen();
     }
 }

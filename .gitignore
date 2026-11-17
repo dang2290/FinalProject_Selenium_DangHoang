@@ -151,8 +151,6 @@ vite.config.ts.timestamp-*
 # File theo dõi tiến độ do agent sinh ra khi chạy batch lớn
 task.md
 
-# Output chạy test / so thiết kế (page source, spec JSON) — reporting_rules.md mục 6
-reports/
 __pycache__/
 
 # IntelliJ IDEA — cấu hình riêng từng máy

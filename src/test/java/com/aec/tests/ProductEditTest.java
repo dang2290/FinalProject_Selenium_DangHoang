@@ -12,7 +12,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.WindowType;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -360,13 +359,12 @@ public class ProductEditTest extends ProductTestBase {
                 openEditOf(list, originalName, originalName).enterName(typedName);
             }
         });
-        String formTab = driver().getWindowHandle();
+        String formTab = browser().currentHandle();
 
         Allure.step("Act: Tab 2 đăng xuất", () -> {
-            driver().switchTo().newWindow(WindowType.TAB);
+            browser().openNewTab();
             new DashboardPage(driver()).open().logout();
-            driver().close();
-            driver().switchTo().window(formTab);
+            browser().closeTabAndSwitchTo(formTab);
         });
 
         Allure.step("Act: Tab 1 bấm lưu", () -> {
@@ -424,7 +422,7 @@ public class ProductEditTest extends ProductTestBase {
         createProduct(name, SaveButton.PUBLISH);
         ProductListPage list = new ProductListPage(driver());
         int row = findRow(list, name, name);
-        String original = driver().getWindowHandle();
+        String original = browser().currentHandle();
 
         Allure.step("Act: Bấm View", () -> {
             list.clickRowButtonAt(row, 0);
@@ -437,7 +435,6 @@ public class ProductEditTest extends ProductTestBase {
             Assert.assertTrue(page.contains(name), "Trang phải hiện tên sản phẩm");
             Assert.assertTrue(page.contains("$10.00"), "Trang phải hiện giá $10.00");
         });
-        driver().close();
-        driver().switchTo().window(original);
+        browser().closeTabAndSwitchTo(original);
     }
 }

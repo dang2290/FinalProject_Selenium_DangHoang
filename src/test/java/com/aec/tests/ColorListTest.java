@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.ColorEditPage;
 import com.aec.pages.ColorListPage;
 import com.aec.pages.LoginPage;
@@ -9,7 +10,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.Dimension;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -21,6 +21,8 @@ import java.util.stream.IntStream;
 @Feature("Colors")
 @Story("Danh sách & tìm kiếm màu")
 public class ColorListTest extends ColorTestBase {
+
+    private static final String MULTI_PAGE_KEYWORD = EnvReferenceData.get("colorKeywordMultiPage");
 
     @Test(groups = {"smoke", "colors", "auth", "ui"}, description = "Màn All Colors đủ thành phần, nhãn nguyên văn")
     @Severity(SeverityLevel.CRITICAL)
@@ -202,7 +204,7 @@ public class ColorListTest extends ColorTestBase {
     @Description("Kiểm tra tìm blue (dữ liệu có sẵn, chỉ đọc) thì có phân trang, mọi dòng chứa blue; bấm trang 2 thì địa chỉ có search=blue và page=2, ô tìm vẫn là blue, mọi dòng vẫn chứa blue.")
     public void testSearchKeepsKeywordAcrossPages() {
         tc("AEC_COLOR_TC_011", "regression", "colors", "auth");
-        String keyword = "blue";
+        String keyword = MULTI_PAGE_KEYWORD;
         ColorListPage list = openColorsAsAdmin();
 
         Allure.step("Act: Tìm " + keyword, () -> list.search(keyword));
@@ -265,7 +267,7 @@ public class ColorListTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + path);
         LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
             loginPage.waitForPath("/login");
@@ -315,7 +317,7 @@ public class ColorListTest extends ColorTestBase {
         ColorListPage list = new ColorListPage(driver());
 
         Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All Colors", () -> {
-            driver().manage().window().setSize(new Dimension(width, height));
+            browser().resize(width, height);
             list.open();
         });
 

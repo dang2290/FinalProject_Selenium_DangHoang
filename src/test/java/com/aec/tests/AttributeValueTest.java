@@ -165,7 +165,7 @@ public class AttributeValueTest extends AttributeTestBase {
         AttributeValueEditPage valueEdit = Allure.step("Act: Mở trang sửa giá trị (theo đường dẫn nút Edit)", () ->
                 {
                     String url = detail.editValueUrlOfRow(0);
-                    driver().get(url);
+                    browser().openUrl(url);
                     return new AttributeValueEditPage(driver()).waitUntilLoaded();
                 });
         Allure.step("Assert: Ô Attribute Value đúng từng ký tự", () ->

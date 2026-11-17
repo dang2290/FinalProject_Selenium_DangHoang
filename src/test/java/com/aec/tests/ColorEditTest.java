@@ -10,7 +10,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.WindowType;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -256,13 +255,12 @@ public class ColorEditTest extends ColorTestBase {
                 openEditOf(list, originalName).enterName(typedName);
             }
         });
-        String formTab = driver().getWindowHandle();
+        String formTab = browser().currentHandle();
 
         Allure.step("Act: Tab 2 đăng xuất", () -> {
-            driver().switchTo().newWindow(WindowType.TAB);
+            browser().openNewTab();
             new DashboardPage(driver()).open().logout();
-            driver().close();
-            driver().switchTo().window(formTab);
+            browser().closeTabAndSwitchTo(formTab);
         });
 
         Allure.step("Act: Tab 1 bấm Save", () -> {

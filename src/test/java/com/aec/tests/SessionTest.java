@@ -11,7 +11,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.WindowType;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -52,7 +51,7 @@ public class SessionTest extends BaseTest {
 
         Allure.step("Assert: Về /login; mở lại /admin vẫn ở /login", () -> {
             Assert.assertEquals(dashboard.currentPath(), "/login", "Sau đăng xuất phải về /login");
-            driver().get(config.getBaseUrl() + "/admin");
+            browser().openPath("/admin");
             Assert.assertEquals(dashboard.currentPath(), "/login", "Mở /admin sau đăng xuất phải về /login");
             Assert.assertFalse(dashboard.isSidebarDisplayedNow(), "Không được thấy Dashboard");
         });
@@ -72,7 +71,7 @@ public class SessionTest extends BaseTest {
         Allure.parameter("Biến thể", variant + " — " + path);
         LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
             loginPage.waitForPath("/login");
@@ -100,7 +99,7 @@ public class SessionTest extends BaseTest {
         Allure.parameter("Trang", path);
         DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Mở " + path + " khi đang đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi đang đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Chuyển tới " + expectedPath, () -> {
             dashboard.waitForPath(expectedPath);
@@ -136,10 +135,11 @@ public class SessionTest extends BaseTest {
 
         Allure.step("Act: Đăng xuất bằng menu tài khoản", dashboard::logout);
 
-        Allure.step("Act: Bấm Back của trình duyệt", () -> driver().navigate().back());
+        Allure.step("Act: Bấm Back của trình duyệt", () -> browser().back());
 
         Allure.step("Assert: Không hiện lại Dashboard", () ->
-                Assert.assertFalse(dashboard.isSidebarDisplayedNow(), "Sau đăng xuất, Back không được hiện lại Dashboard"));
+                Assert.assertFalse(dashboard.isSidebarDisplayedNow(),
+                        "Sau đăng xuất, Back không được hiện lại Dashboard — đang ở " + dashboard.currentUrl()));
     }
 
     @Test(groups = {"regression", "login", "auth", "security"}, description = "Hết phiên khi đang mở form thì không lưu")
@@ -149,7 +149,7 @@ public class SessionTest extends BaseTest {
         tc("AEC_LOGIN_TC_020", "regression", "login", "auth", "security");
         loginAsAdmin();
         BrandPage brandPage = new BrandPage(driver());
-        String formTab = driver().getWindowHandle();
+        String formTab = browser().currentHandle();
 
         Allure.step("Arrange: Tab 1 mở All Brands, nhập tên brand mới (chưa lưu)", () -> {
             brandPage.open();
@@ -157,10 +157,9 @@ public class SessionTest extends BaseTest {
         });
 
         Allure.step("Act: Tab 2 đăng xuất", () -> {
-            driver().switchTo().newWindow(WindowType.TAB);
+            browser().openNewTab();
             new DashboardPage(driver()).open().logout();
-            driver().close();
-            driver().switchTo().window(formTab);
+            browser().closeTabAndSwitchTo(formTab);
         });
 
         Allure.step("Act: Tab 1 bấm Save", brandPage::clickSave);

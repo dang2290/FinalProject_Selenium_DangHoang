@@ -9,7 +9,6 @@ import com.aec.utils.TestDataGenerator;
 import io.qameta.allure.Allure;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openqa.selenium.NoAlertPresentException;
 import org.testng.Assert;
 
 import java.util.ArrayList;
@@ -110,10 +109,6 @@ abstract class AttributeTestBase extends BaseTest {
     }
 
     private void dismissAlertIfOpen() {
-        try {
-            driver().switchTo().alert().dismiss();
-        } catch (NoAlertPresentException e) {
-            LOG.debug("Không có hộp thoại cần đóng");
-        }
+        browser().dismissAlertIfOpen();
     }
 }

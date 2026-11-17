@@ -138,8 +138,22 @@ public class ProductEditPage extends BasePage {
         return (List<String>) js("return [...document.querySelectorAll('#sku_combination tr.variant input[name^=\"price_\"]')].map(i => i.value);");
     }
 
+    /** Ảnh xem trước được dựng bằng AJAX sau khi trang tải — ô Thumbnail đã có id ảnh thì chờ ảnh hiện rồi mới đếm. */
     public int thumbnailPreviewCount() {
+        String imageId = fieldValue("thumbnail_img");
+        if (imageId != null && !imageId.isBlank()) {
+            try {
+                wait.until(d -> !d.findElements(THUMBNAIL_PREVIEW).isEmpty());
+            } catch (org.openqa.selenium.TimeoutException e) {
+                log.warn("Ô Thumbnail có id {} nhưng không dựng được ảnh xem trước", imageId);
+            }
+        }
         return driver.findElements(THUMBNAIL_PREVIEW).size();
+    }
+
+    /** Tên tệp của ảnh Thumbnail đang xem trước — gọi sau thumbnailPreviewCount() để ảnh đã dựng xong. */
+    public String thumbnailPreviewTitle() {
+        return driver.findElement(THUMBNAIL_PREVIEW).getAttribute("title");
     }
 
     /** Trang 419 PAGE EXPIRED — gửi form khi phiên đã hết. */

@@ -58,7 +58,7 @@ public class AttributeLifecycleTest extends AttributeTestBase {
         });
 
         Allure.step("Assert: Trang Attribute Detail cũ báo không tìm thấy", () -> {
-            driver().get(detailUrl);
+            browser().openUrl(detailUrl);
             Assert.assertTrue(list.isPageNotFound(), "Phải hiện Page Not Found!");
         });
     }

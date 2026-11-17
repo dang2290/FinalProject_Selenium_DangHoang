@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.CategoryFormPage;
 import com.aec.pages.CategoryFormPage.ImageField;
 import com.aec.pages.CategoryListPage;
@@ -11,7 +12,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.Dimension;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -29,6 +29,8 @@ import java.util.stream.IntStream;
 @Feature("Manage Category")
 @Story("Danh sách & tìm kiếm danh mục")
 public class CategoryListTest extends CategoryTestBase {
+
+    private static final String MEDIA_KEYWORD = EnvReferenceData.get("mediaKeyword");
 
     private static final int PAGE_SIZE = 15;
     private static final List<String> ALL_COLUMNS = List.of("#", "Name", "Parent Category", "Order Level", "Level",
@@ -247,7 +249,7 @@ public class CategoryListTest extends CategoryTestBase {
             if (withImages) {
                 for (ImageField field : ImageField.values()) {
                     MediaLibraryModal library = form.openLibrary(field);
-                    library.search("brandimg");
+                    library.search(MEDIA_KEYWORD);
                     library.selectFile(0);
                     library.addFiles();
                 }
@@ -366,7 +368,7 @@ public class CategoryListTest extends CategoryTestBase {
         });
 
         Allure.step("Act: Tải lại trang", () -> {
-            driver().navigate().refresh();
+            browser().refresh();
             list.waitUntilLoaded();
         });
 
@@ -388,7 +390,7 @@ public class CategoryListTest extends CategoryTestBase {
         Allure.parameter("Biến thể", variant + " — " + path);
         LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
             loginPage.waitForPath("/login");
@@ -466,7 +468,7 @@ public class CategoryListTest extends CategoryTestBase {
         CategoryListPage list = new CategoryListPage(driver());
 
         Allure.step("Act: Đặt cửa sổ " + width + "×" + height + ", tìm danh mục test", () -> {
-            driver().manage().window().setSize(new Dimension(width, height));
+            browser().resize(width, height);
             findRow(list, name);
         });
 

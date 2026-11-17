@@ -289,7 +289,7 @@ public class BrandEditTest extends BrandTestBase {
         });
 
         BrandEditPage editPage = new BrandEditPage(driver());
-        Allure.step("Act: Mở lại đường dẫn sửa đã ghi", () -> driver().get(editUrl));
+        Allure.step("Act: Mở lại đường dẫn sửa đã ghi", () -> browser().openUrl(editUrl));
 
         Allure.step("Assert: Trang Page Not Found!, không có form sửa", () -> {
             Assert.assertTrue(editPage.isNotFoundPage(), "Phải hiện Page Not Found!");

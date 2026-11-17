@@ -10,7 +10,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.WindowType;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -329,13 +328,12 @@ public class CategoryTest extends CategoryTestBase {
             page.enterName(typedName);
             return page;
         });
-        String formTab = driver().getWindowHandle();
+        String formTab = browser().currentHandle();
 
         Allure.step("Act: Tab 2 đăng xuất", () -> {
-            driver().switchTo().newWindow(WindowType.TAB);
+            browser().openNewTab();
             new DashboardPage(driver()).open().logout();
-            driver().close();
-            driver().switchTo().window(formTab);
+            browser().closeTabAndSwitchTo(formTab);
         });
 
         Allure.step("Act: Tab 1 bấm Save", form::clickSave);
@@ -367,16 +365,16 @@ public class CategoryTest extends CategoryTestBase {
         CategoryListPage list = openCategoriesAsAdmin();
         createCategory(name);
         String editUrl = openEditOf(list, name).currentUrl();
-        String firstTab = driver().getWindowHandle();
+        String firstTab = browser().currentHandle();
 
         String secondTab = Allure.step("Arrange: Mở form sửa cùng danh mục ở tab thứ 2", () -> {
-            driver().switchTo().newWindow(WindowType.TAB);
+            browser().openNewTab();
             new CategoryFormPage(driver()).openUrl(editUrl);
-            return driver().getWindowHandle();
+            return browser().currentHandle();
         });
 
         Allure.step("Act: Tab 1 đổi Name thành giá trị 1 rồi Save", () -> {
-            driver().switchTo().window(firstTab);
+            browser().switchTo(firstTab);
             CategoryFormPage form = new CategoryFormPage(driver());
             form.enterName(firstName);
             form.saveAndWait();
@@ -384,7 +382,7 @@ public class CategoryTest extends CategoryTestBase {
         });
 
         Allure.step("Act: Tab 2 đổi Name thành giá trị 2 rồi Save", () -> {
-            driver().switchTo().window(secondTab);
+            browser().switchTo(secondTab);
             CategoryFormPage form = new CategoryFormPage(driver());
             form.enterName(secondName);
             form.saveAndWait();

@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.MediaLibraryModal;
 import com.aec.pages.ProductCreatePage;
 import com.aec.pages.ProductCreatePage.SaveButton;
@@ -25,10 +26,8 @@ import java.util.List;
 @Story("Tạo sản phẩm")
 public class ProductCreateTest extends ProductTestBase {
 
-    private static final List<String> SECTIONS = List.of("Product Information", "Product Images", "Product Videos",
-            "Product Variation", "Product price + stock", "Product Description", "PDF Specification", "SEO Meta Tags",
-            "Shipping Configuration", "Low Stock Quantity Warning", "Stock Visibility State", "Cash on Delivery", "Featured",
-            "Todays Deal", "Flash Deal", "Estimate Shipping Time", "Vat & TAX");
+    private static final String CATEGORY = EnvReferenceData.get("productCategory");
+    private static final String BRAND = EnvReferenceData.get("productBrand");
 
     @Test(groups = {"smoke", "product", "auth", "ui"}, description = "Form Add New Product đủ khối, đúng mặc định")
     @Severity(SeverityLevel.CRITICAL)
@@ -40,7 +39,7 @@ public class ProductCreateTest extends ProductTestBase {
 
         Allure.step("Assert: Tiêu đề và các khối", () -> {
             Assert.assertTrue(form.isTitleDisplayed(), "Tiêu đề Add New Product");
-            Assert.assertEquals(form.sectionTitles(), SECTIONS, "Các khối của form");
+            Assert.assertEquals(form.sectionTitles(), PRODUCT_FORM_SECTIONS, "Các khối của form");
         });
         Allure.step("Assert: Giá trị mặc định", () -> {
             Assert.assertEquals(form.fieldValue("weight"), "0.00", "Weight");
@@ -290,8 +289,8 @@ public class ProductCreateTest extends ProductTestBase {
         ProductCreatePage form = openCreateForm();
 
         Allure.step("Act: Chọn Category, Brand, nhập dữ liệu, bấm Save & Unpublish", () -> {
-            form.chooseCategory("Sport shoes");
-            form.chooseBrand("MiuMiu");
+            form.chooseCategory(CATEGORY);
+            form.chooseBrand(BRAND);
             form.fillRequired(name);
             form.saveAndWait(SaveButton.UNPUBLISH);
         });
@@ -300,8 +299,8 @@ public class ProductCreateTest extends ProductTestBase {
 
         Allure.step("Assert: Trang sửa hiện đúng Category, Brand", () -> {
             ProductEditPage edit = openEditOf(new ProductListPage(driver()), name, name);
-            Assert.assertEquals(edit.selectedOptionText("category_id").replaceFirst("^-+\\s*", ""), "Sport shoes", "Category");
-            Assert.assertEquals(edit.selectedOptionText("brand_id"), "MiuMiu", "Brand");
+            Assert.assertEquals(edit.selectedOptionText("category_id").replaceFirst("^-+\\s*", ""), CATEGORY, "Category");
+            Assert.assertEquals(edit.selectedOptionText("brand_id"), BRAND, "Brand");
         });
     }
 
@@ -390,14 +389,18 @@ public class ProductCreateTest extends ProductTestBase {
         String videoLink = "https://www.youtube.com/watch?v=aqz-KE-bpKQ";
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
+        String[] chosenFile = {""};
 
         Allure.step("Act: Nhập dữ liệu, gắn " + kind + ", bấm Save & Unpublish", () -> {
             form.fillRequired(name);
             if ("thumbnail".equals(kind)) {
                 MediaLibraryModal library = form.openThumbnailLibrary();
                 library.selectFile(0);
+                chosenFile[0] = library.fileNameAt(0);
                 library.addFiles();
+                Allure.parameter("Ảnh đã chọn", chosenFile[0]);
                 Assert.assertEquals(form.thumbnailPreviewCount(), 1, "Khung xem trước phải có 1 ảnh");
+                Assert.assertEquals(form.thumbnailPreviewTitle(), chosenFile[0], "Khung xem trước phải là ảnh vừa chọn");
             } else {
                 form.enterField("video_link", videoLink);
             }
@@ -408,7 +411,8 @@ public class ProductCreateTest extends ProductTestBase {
         Allure.step("Assert: Trang sửa hiện đúng " + kind, () -> {
             ProductEditPage edit = openEditOf(new ProductListPage(driver()), name, name);
             if ("thumbnail".equals(kind)) {
-                Assert.assertEquals(edit.thumbnailPreviewCount(), 1, "Ô Thumbnail Image phải hiện ảnh đã chọn");
+                Assert.assertEquals(edit.thumbnailPreviewCount(), 1, "Ô Thumbnail Image phải có 1 ảnh");
+                Assert.assertEquals(edit.thumbnailPreviewTitle(), chosenFile[0], "Ô Thumbnail Image phải là đúng ảnh đã chọn");
             } else {
                 Assert.assertEquals(edit.selectedOptionText("video_provider"), "Youtube", "Video Provider");
                 Assert.assertEquals(edit.fieldValue("video_link"), videoLink, "Video Link");
@@ -510,10 +514,9 @@ public class ProductCreateTest extends ProductTestBase {
 
         List<String> sequence = Allure.step("Act: Từ ô Product Name nhấn Tab 4 lần", () -> form.tabSequenceFromName(4));
 
-        Allure.step("Assert: Focus đi lần lượt qua 4 ô khác nhau, có viền khi focus", () -> {
+        Allure.step("Assert: Focus đi lần lượt Category → Brand → Unit → Weight, có viền khi focus", () -> {
             Allure.parameter("Thứ tự focus", String.join(" → ", sequence));
-            Assert.assertEquals(sequence.stream().distinct().count(), 4L, "Mỗi lần Tab phải sang ô khác: " + sequence);
-            Assert.assertTrue(sequence.stream().noneMatch(String::isBlank), "Phần tử nhận focus phải là ô/nút có tên: " + sequence);
+            Assert.assertEquals(sequence, List.of("category_id", "brand_id", "unit", "weight"), "Thứ tự focus sau ô Product Name");
             Assert.assertEquals(form.fieldsWithoutVisibleFocus(), List.of(), "Ô không đổi gì khi được focus");
         });
     }

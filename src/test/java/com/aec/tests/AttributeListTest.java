@@ -10,7 +10,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.Dimension;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -199,7 +198,7 @@ public class AttributeListTest extends AttributeTestBase {
         Allure.parameter("Biến thể", variant + " — " + path);
         LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> driver().get(config.getBaseUrl() + path));
+        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
         Allure.step("Assert: Về trang đăng nhập", () -> {
             loginPage.waitForPath("/login");
@@ -279,7 +278,7 @@ public class AttributeListTest extends AttributeTestBase {
         AttributeListPage list = new AttributeListPage(driver());
 
         Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All Attributes", () -> {
-            driver().manage().window().setSize(new Dimension(width, height));
+            browser().resize(width, height);
             list.open();
         });
 

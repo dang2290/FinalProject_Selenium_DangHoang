@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.BrandEditPage;
 import com.aec.pages.BrandPage;
 import com.aec.pages.MediaLibraryModal;
@@ -27,6 +28,8 @@ import static com.aec.utils.TestDataGenerator.padTo;
 @Feature("Manage Brand")
 @Story("Validation form brand")
 public class BrandValidationTest extends BrandTestBase {
+
+    private static final String MEDIA_KEYWORD = EnvReferenceData.get("mediaKeyword");
 
     @DataProvider(name = "emptyNameWays", parallel = true)
     public Object[][] emptyNameWays() {
@@ -396,9 +399,9 @@ public class BrandValidationTest extends BrandTestBase {
         tc("AEC_BRAND_TC_035", "regression", "brand", "auth");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        MediaLibraryModal library = Allure.step("Arrange: Mở thư viện, lọc brandimg", () -> {
+        MediaLibraryModal library = Allure.step("Arrange: Mở thư viện, lọc " + MEDIA_KEYWORD, () -> {
             MediaLibraryModal modal = brandPage.openLogoLibrary();
-            modal.search("brandimg");
+            modal.search(MEDIA_KEYWORD);
             return modal;
         });
 

@@ -1,5 +1,6 @@
 package com.aec.tests;
 
+import com.aec.utils.EnvReferenceData;
 import com.aec.pages.BrandEditPage;
 import com.aec.pages.BrandPage;
 import com.aec.pages.MediaLibraryModal;
@@ -10,7 +11,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import org.openqa.selenium.WindowType;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -21,6 +21,8 @@ import java.util.List;
 @Feature("Manage Brand")
 @Story("Tạo · sửa · xoá brand")
 public class BrandTest extends BrandTestBase {
+
+    private static final String MEDIA_KEYWORD = EnvReferenceData.get("mediaKeyword");
 
     @Test(groups = {"smoke", "brand", "auth"}, description = "Tạo brand chỉ với Name rồi tìm lại được trong danh sách")
     @Severity(SeverityLevel.CRITICAL)
@@ -58,9 +60,9 @@ public class BrandTest extends BrandTestBase {
 
         Allure.step("Act: Nhập Name", () -> brandPage.enterNewBrandName(name));
 
-        MediaLibraryModal library = Allure.step("Act: Bấm Browse ở ô Logo, lọc brandimg, chọn ảnh đầu", () -> {
+        MediaLibraryModal library = Allure.step("Act: Bấm Browse ở ô Logo, lọc " + MEDIA_KEYWORD + ", chọn ảnh đầu", () -> {
             MediaLibraryModal modal = brandPage.openLogoLibrary();
-            modal.search("brandimg");
+            modal.search(MEDIA_KEYWORD);
             modal.selectFile(0);
             return modal;
         });
@@ -98,7 +100,7 @@ public class BrandTest extends BrandTestBase {
         Allure.step("Assert: Form sửa giữ đúng Name, logo, Meta Title, Meta description", () -> {
             Assert.assertEquals(editPage.nameValue(), name, "Name");
             Assert.assertEquals(editPage.logoPreviewCount(), 1, "Logo phải có 1 ảnh");
-            Assert.assertEquals(editPage.logoPreviewTitle(), "brandimg.png", "Tên tệp logo");
+            Assert.assertEquals(editPage.logoPreviewTitle(), EnvReferenceData.get("mediaFileName"), "Tên tệp logo");
             Assert.assertEquals(editPage.metaTitleValue(), metaTitle, "Meta Title");
             Assert.assertEquals(editPage.metaDescriptionValue(), metaDescription, "Meta description");
         });
@@ -262,16 +264,16 @@ public class BrandTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
         String editUrl = openEditOf(brandPage, name).currentUrl();
-        String firstTab = driver().getWindowHandle();
+        String firstTab = browser().currentHandle();
 
         String secondTab = Allure.step("Arrange: Mở form sửa cùng brand ở tab thứ 2", () -> {
-            driver().switchTo().newWindow(WindowType.TAB);
+            browser().openNewTab();
             new BrandEditPage(driver()).openUrl(editUrl);
-            return driver().getWindowHandle();
+            return browser().currentHandle();
         });
 
         Allure.step("Act: Tab 1 đổi Name thành X rồi Save", () -> {
-            driver().switchTo().window(firstTab);
+            browser().switchTo(firstTab);
             BrandEditPage editPage = new BrandEditPage(driver());
             editPage.enterName(name + "_X");
             editPage.saveAndWait();
@@ -279,7 +281,7 @@ public class BrandTest extends BrandTestBase {
         });
 
         Allure.step("Act: Tab 2 đổi Name thành Y rồi Save", () -> {
-            driver().switchTo().window(secondTab);
+            browser().switchTo(secondTab);
             BrandEditPage editPage = new BrandEditPage(driver());
             editPage.enterName(name + "_Y");
             editPage.saveAndWait();
