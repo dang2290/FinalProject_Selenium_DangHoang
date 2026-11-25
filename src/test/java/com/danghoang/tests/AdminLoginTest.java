@@ -1,8 +1,9 @@
 package com.danghoang.tests;
 
 import com.danghoang.base.BaseTest;
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.LoginPage;
-import com.danghoang.utils.JsonDataReader;
 import com.danghoang.utils.TestDataGenerator;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
@@ -30,13 +31,13 @@ public class AdminLoginTest extends BaseTest {
     @Description("Kiểm tra trang /login hiện đủ logo, tiêu đề, 2 ô có chữ gợi ý, Remember Me, Forgot password ?, nút Login và không có CAPTCHA.")
     public void testAdminLoginPageElements() {
         tc("AEC_LOGIN_TC_001", "smoke", "login");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Assert: Đối chiếu bảng kiểm thành phần", () -> {
+        verify(StepNames.SCREEN_CHECKLIST, () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertTrue(loginPage.isLogoDisplayed(), "1. Phải có logo");
             soft.assertTrue(loginPage.isHeadingDisplayed(), "1. Tiêu đề phải là 'Welcome to Active eCommerce CMS'");
@@ -57,15 +58,15 @@ public class AdminLoginTest extends BaseTest {
     @Description("Kiểm tra mở /login là gõ được ngay vào ô Email, Remember Me không tick, ô Password trống.")
     public void testAdminLoginDefaultState() {
         tc("AEC_LOGIN_TC_002", "smoke", "login");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Act: Gõ chữ 'a' ngay, không bấm chuột", () -> loginPage.typeWithoutClicking("a"));
+        act("Gõ chữ 'a' ngay, không bấm chuột", () -> loginPage.typeWithoutClicking("a"));
 
-        Allure.step("Assert: Chữ vào ô Email, Remember Me không tick, Password trống", () -> {
+        verify("Chữ vào ô Email, Remember Me không tick, Password trống", () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertEquals(loginPage.emailValue(), "a", "Con trỏ phải nằm sẵn ở ô Email");
             soft.assertFalse(loginPage.isRememberMeChecked(), "Remember Me phải không tick");
@@ -74,28 +75,20 @@ public class AdminLoginTest extends BaseTest {
         });
     }
 
-    @DataProvider(name = "invalidEmails", parallel = true)
-    public Object[][] invalidEmails() {
-        return JsonDataReader.readList("testdata/login_email_invalid.json").stream()
-                .map(row -> new Object[]{row})
-                .toArray(Object[][]::new);
-    }
-
-    @Test(dataProvider = "invalidEmails", groups = {"regression", "login", "validation"},
+    @Test(dataProvider = "invalidEmails", dataProviderClass = DataProviderFactory.class, groups = {"regression", "login", "validation"},
             description = "Email trống hoặc sai định dạng bị chặn")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra bấm Login khi ô Email trống hoặc sai định dạng thì trình duyệt nhắc ở ô Email, form không gửi, trang không tải lại.")
     public void testAdminLoginInvalidEmailBlocked(Map<String, String> data) {
         tc("AEC_LOGIN_TC_008", "regression", "login", "validation");
         Allure.parameter("Biến thể", data.get("variant") + " — " + data.get("case"));
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
-            loginPage.markPage();
         });
 
-        Allure.step("Act: Nhập Email '" + data.get("email") + "', Password giả, bấm Login", () -> {
+        act("Nhập Email '" + data.get("email") + "', Password giả, bấm Login", () -> {
             if (!data.get("email").isEmpty()) {
                 loginPage.enterEmail(data.get("email"));
             }
@@ -103,7 +96,7 @@ public class AdminLoginTest extends BaseTest {
             loginPage.submit();
         });
 
-        Allure.step("Assert: Trình duyệt nhắc ở ô Email, form không gửi", () -> {
+        verify("Trình duyệt nhắc ở ô Email, form không gửi", () -> {
             Assert.assertFalse(loginPage.emailValidationMessage().isEmpty(), "Trình duyệt phải nhắc ở ô Email");
             Assert.assertTrue(loginPage.isSamePageInstance(), "Trang không được tải lại");
             Assert.assertEquals(loginPage.focusedFieldId(), "email", "Con trỏ phải về ô Email");
@@ -116,19 +109,18 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginEmptyPasswordBlocked() {
         tc("AEC_LOGIN_TC_009", "regression", "login", "validation");
         Allure.parameter("Biến thể", "a — Password trống");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
-            loginPage.markPage();
         });
 
-        Allure.step("Act: Nhập Email test, để trống Password, bấm Login", () -> {
+        act("Nhập Email test, để trống Password, bấm Login", () -> {
             loginPage.enterEmail(TestDataGenerator.email("login_TC009a"));
             loginPage.submit();
         });
 
-        Allure.step("Assert: Trình duyệt nhắc ở ô Password, form không gửi", () -> {
+        verify("Trình duyệt nhắc ở ô Password, form không gửi", () -> {
             Assert.assertFalse(loginPage.passwordValidationMessage().isEmpty(), "Trình duyệt phải nhắc ở ô Password");
             Assert.assertTrue(loginPage.isSamePageInstance(), "Trang không được tải lại");
         });
@@ -140,16 +132,16 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginBlankPasswordRejected() {
         tc("AEC_LOGIN_TC_009", "regression", "login", "validation");
         Allure.parameter("Biến thể", "b — Password 3 dấu cách");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
         String email = TestDataGenerator.email("login_TC009b");
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Act: Nhập Email test, Password 3 dấu cách, bấm Login", () -> loginPage.login(email, "   "));
+        act("Nhập Email test, Password 3 dấu cách, bấm Login", () -> loginPage.login(email, "   "));
 
-        Allure.step("Assert: Chữ đỏ dưới Password, ô Email giữ giá trị", () -> {
+        verify("Chữ đỏ dưới Password, ô Email giữ giá trị", () -> {
             Assert.assertEquals(loginPage.getErrorMessage(), "The password field is required.", "Thông báo dưới ô Password");
             Assert.assertTrue(loginPage.isStillOnLoginPage(), "Phải ở lại /login");
             Assert.assertEquals(loginPage.emailValue(), email, "Ô Email phải giữ email đã nhập");
@@ -162,16 +154,16 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginUnknownEmailRejected() {
         tc("AEC_LOGIN_TC_010", "regression", "login");
         Allure.parameter("Biến thể", "a — Email chưa đăng ký");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Act: Đăng nhập bằng email chưa đăng ký", () ->
+        act("Đăng nhập bằng email chưa đăng ký", () ->
                 loginPage.login(TestDataGenerator.email("login_TC010"), TestDataGenerator.password("TC010")));
 
-        Allure.step("Assert: Thông báo lỗi, hai ô trống", () -> {
+        verify("Thông báo lỗi, hai ô trống", () -> {
             Assert.assertEquals(loginPage.getErrorMessage(), INVALID_CREDENTIALS, "Thông báo sai thông tin");
             Assert.assertTrue(loginPage.isStillOnLoginPage(), "Phải ở lại /login");
             Assert.assertEquals(loginPage.emailValue(), "", "Ô Email phải trống");
@@ -184,15 +176,15 @@ public class AdminLoginTest extends BaseTest {
     @Description("Kiểm tra ô Password che ký tự khi gõ và không có nút hiện mật khẩu.")
     public void testAdminPasswordMasked() {
         tc("AEC_LOGIN_TC_034", "regression", "login", "security");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Act: Gõ 'Abc12345' vào ô Password", () -> loginPage.enterPassword("Abc12345"));
+        act("Gõ 'Abc12345' vào ô Password", () -> loginPage.enterPassword("Abc12345"));
 
-        Allure.step("Assert: Ô được che, không có nút hiện mật khẩu", () -> {
+        verify("Ô được che, không có nút hiện mật khẩu", () -> {
             Assert.assertEquals(loginPage.passwordInputType(), "password", "Ô Password phải che ký tự");
             Assert.assertFalse(loginPage.hasPasswordRevealToggle(), "Không được có nút hiện mật khẩu");
         });
@@ -213,15 +205,15 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginSqlInjectionRejected(String variant, String email, String password) {
         tc("AEC_LOGIN_TC_035", "regression", "login", "security");
         Allure.parameter("Biến thể", variant);
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Act: Đăng nhập với chuỗi SQL", () -> loginPage.login(email, password));
+        act("Đăng nhập với chuỗi SQL", () -> loginPage.login(email, password));
 
-        Allure.step("Assert: Bị từ chối, không trang lỗi", () -> {
+        verify("Bị từ chối, không trang lỗi", () -> {
             Assert.assertEquals(loginPage.getErrorMessage(), INVALID_CREDENTIALS, "Phải bị từ chối như sai thông tin");
             Assert.assertTrue(loginPage.isStillOnLoginPage(), "Phải ở lại /login, không vào Dashboard");
         });
@@ -232,17 +224,17 @@ public class AdminLoginTest extends BaseTest {
     @Description("Kiểm tra nhấp đúp nút Login với thông tin sai thì không có trang lỗi, chỉ một thông báo 'Invalid login credentials'.")
     public void testAdminLoginDoubleClick() {
         tc("AEC_LOGIN_TC_036", "regression", "login");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang, nhập thông tin sai", () -> {
+        arrange("Mở trang, nhập thông tin sai", () -> {
             loginPage.open();
             loginPage.enterEmail(TestDataGenerator.email("login_TC036"));
             loginPage.enterPassword(TestDataGenerator.password("TC036"));
         });
 
-        Allure.step("Act: Nhấp đúp nút Login", loginPage::doubleClickLogin);
+        act("Nhấp đúp nút Login", loginPage::doubleClickLogin);
 
-        Allure.step("Assert: Một thông báo lỗi, không trang lỗi", () -> {
+        verify("Một thông báo lỗi, không trang lỗi", () -> {
             Assert.assertEquals(loginPage.getErrorMessage(), INVALID_CREDENTIALS, "Thông báo sai thông tin");
             Assert.assertTrue(loginPage.isStillOnLoginPage(), "Phải ở lại /login, không trang lỗi");
         });
@@ -255,19 +247,19 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginKeyboardTabOrder() {
         tc("AEC_LOGIN_TC_037", "regression", "login", "accessibility", "knownIssue");
         Allure.parameter("Biến thể", "a — Tab");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập quản trị", () -> {
+        arrange(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        List<String> sequence = Allure.step("Act: Nhấn Tab 4 lần từ ô Email", () -> loginPage.tabSequenceFromEmail(4));
+        List<String> sequence = act("Nhấn Tab 4 lần từ ô Email", () -> loginPage.tabSequenceFromEmail(4));
 
-        Allure.step("Assert: Thứ tự Tab đúng", () ->
+        verify("Thứ tự Tab đúng", () ->
                 Assert.assertEquals(sequence, List.of("password", "remember", "Forgot password ?", "Login"),
                         "Thứ tự focus sau mỗi lần Tab"));
 
-        Allure.step("Assert: Phần tử đang chọn có dấu hiệu nhìn thấy được", () ->
+        verify("Phần tử đang chọn có dấu hiệu nhìn thấy được", () ->
                 Assert.assertEquals(loginPage.elementsWithoutVisibleFocus(), List.of(),
                         "Các phần tử này không đổi gì khi được chọn bằng Tab"));
     }
@@ -278,17 +270,17 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginEnterSubmits() {
         tc("AEC_LOGIN_TC_037", "regression", "login", "accessibility");
         Allure.parameter("Biến thể", "b — Enter");
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Mở trang, nhập thông tin sai", () -> {
+        arrange("Mở trang, nhập thông tin sai", () -> {
             loginPage.open();
             loginPage.enterEmail(TestDataGenerator.email("login_TC037b"));
             loginPage.enterPassword(TestDataGenerator.password("TC037b"));
         });
 
-        Allure.step("Act: Nhấn Enter trong ô Password", loginPage::pressEnterInPassword);
+        act("Nhấn Enter trong ô Password", loginPage::pressEnterInPassword);
 
-        Allure.step("Assert: Form được gửi", () ->
+        verify("Form được gửi", () ->
                 Assert.assertEquals(loginPage.getErrorMessage(), INVALID_CREDENTIALS, "Enter phải gửi form"));
     }
 
@@ -304,16 +296,16 @@ public class AdminLoginTest extends BaseTest {
     public void testAdminLoginResponsive(String variant, int width, int height) {
         tc("AEC_LOGIN_TC_038", "regression", "login", "responsive");
         Allure.parameter("Biến thể", variant + " — " + width + "×" + height);
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Arrange: Đặt cửa sổ " + width + "×" + height, () ->
+        arrange("Đặt cửa sổ " + width + "×" + height, () ->
                 browser().resize(width, height));
 
-        Allure.step("Act: Mở trang đăng nhập quản trị", () -> {
+        act(StepNames.OPEN_ADMIN_LOGIN, () -> {
             loginPage.open();
         });
 
-        Allure.step("Assert: Đủ thành phần, không cuộn ngang", () -> {
+        verify("Đủ thành phần, không cuộn ngang", () -> {
             Assert.assertTrue(loginPage.isLoginButtonDisplayed() && loginPage.isForgotPasswordDisplayed(),
                     "Nút Login và liên kết Forgot password ? phải hiện");
             Assert.assertTrue(loginPage.hasNoHorizontalScroll(), "Không được có thanh cuộn ngang toàn trang");

@@ -1,8 +1,10 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
+import io.qameta.allure.Allure;
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import java.util.List;
@@ -24,75 +26,75 @@ public class RegistrationPage extends StorefrontPage {
     private static final By PHONE_INPUT = By.cssSelector(FORM + "input[name='phone'], " + FORM + "input[type='tel']");
     private static final By VISIBLE_INPUTS = By.cssSelector(FORM + "input:not([type='hidden']):not([type='checkbox'])");
 
-    public RegistrationPage(WebDriver driver) {
-        super(driver);
-    }
-
     @Step("Mở trang đăng ký")
     public RegistrationPage open() {
         openStorefront("/users/registration", FULL_NAME_INPUT);
         return this;
     }
 
-    @Step("Điền form đăng ký: tên {fullName}, email {email}")
+    // Không dùng @Step ở method nhận mật khẩu: Allure ghi mọi tham số vào JSON, kể cả khi @Param(mode = MASKED)
     public void fillForm(String fullName, String email, String password, String confirmPassword) {
-        type(FULL_NAME_INPUT, fullName);
-        type(EMAIL_INPUT, email);
-        type(PASSWORD_INPUT, password);
-        type(CONFIRM_PASSWORD_INPUT, confirmPassword);
+        Allure.step("Điền form đăng ký: tên " + fullName + ", email " + email, () -> {
+            WebUI.setText(FULL_NAME_INPUT, fullName);
+            WebUI.setText(EMAIL_INPUT, email);
+            WebUI.setText(PASSWORD_INPUT, password);
+            WebUI.setText(CONFIRM_PASSWORD_INPUT, confirmPassword);
+        });
     }
 
     @Step("Tick ô đồng ý điều khoản")
     public void acceptTerms() {
-        WebElement checkbox = driver.findElement(TERMS_CHECKBOX);
+        WebElement checkbox = WebUI.getWebElement(TERMS_CHECKBOX);
         if (!checkbox.isSelected()) {
-            js("arguments[0].click();", checkbox);
+            WebUI.clickElementByJS(checkbox, "ô đồng ý điều khoản");
         }
     }
 
     @Step("Bấm Create Account")
     public void submit() {
-        click(CREATE_ACCOUNT_BUTTON);
+        markPage();
+        WebUI.clickElement(CREATE_ACCOUNT_BUTTON);
     }
 
     @Step("Bấm Log In")
-    public void clickLogIn() {
-        click(LOG_IN_LINK);
+    public CustomerLoginPage clickLogIn() {
+        WebUI.clickElement(LOG_IN_LINK);
+        return new CustomerLoginPage();
     }
 
     public boolean isTitleDisplayed() {
-        return isVisible(TITLE);
+        return WebUI.isElementVisible(TITLE);
     }
 
     public List<String> fieldPlaceholdersInOrder() {
-        return driver.findElements(VISIBLE_INPUTS).stream().map(e -> e.getAttribute("placeholder")).toList();
+        return WebUI.getAllElementsAttribute(VISIBLE_INPUTS, "placeholder");
     }
 
     public boolean isTermsTextDisplayed() {
-        return isPresentNow(TERMS_TEXT);
+        return WebUI.isElementDisplayedNow(TERMS_TEXT);
     }
 
     public boolean isTermsChecked() {
-        return driver.findElement(TERMS_CHECKBOX).isSelected();
+        return WebUI.isElementSelected(TERMS_CHECKBOX);
     }
 
     public String termsValidationMessage() {
-        return validationMessage(TERMS_CHECKBOX);
+        return WebUI.getValidationMessage(TERMS_CHECKBOX);
     }
 
     public boolean isCreateAccountDisplayed() {
-        return isPresentNow(CREATE_ACCOUNT_BUTTON);
+        return WebUI.isElementDisplayedNow(CREATE_ACCOUNT_BUTTON);
     }
 
     public boolean isLogInPromptDisplayed() {
-        return isPresentNow(ALREADY_HAVE_ACCOUNT) && isPresentNow(LOG_IN_LINK);
+        return WebUI.isElementDisplayedNow(ALREADY_HAVE_ACCOUNT) && WebUI.isElementDisplayedNow(LOG_IN_LINK);
     }
 
     public boolean hasPhoneField() {
-        return !driver.findElements(PHONE_INPUT).isEmpty();
+        return WebUI.checkElementExist(PHONE_INPUT);
     }
 
     public String emailValue() {
-        return driver.findElement(EMAIL_INPUT).getAttribute("value");
+        return WebUI.getElementValue(EMAIL_INPUT);
     }
 }

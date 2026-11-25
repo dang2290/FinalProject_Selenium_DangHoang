@@ -1,11 +1,9 @@
 package com.danghoang.drivers;
 
 import com.danghoang.config.ConfigReader;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.danghoang.utils.LogUtils;
 import org.openqa.selenium.Dimension;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
@@ -15,11 +13,9 @@ import org.openqa.selenium.firefox.FirefoxOptions;
 
 import java.time.Duration;
 
-/** Mỗi thread một WebDriver riêng — bắt buộc vì suite luôn chạy song song. */
+/** Chỉ TẠO trình duyệt theo cấu hình (browser, headless). Giữ và đóng: {@link DriverManager}. */
 public final class DriverFactory {
 
-    private static final Logger LOG = LogManager.getLogger(DriverFactory.class);
-    private static final ThreadLocal<WebDriver> DRIVER = new ThreadLocal<>();
     private static final int WIDTH = 1920;
     private static final int HEIGHT = 1080;
     /**
@@ -36,7 +32,7 @@ public final class DriverFactory {
 
     private DriverFactory() {}
 
-    public static WebDriver initDriver() {
+    public static WebDriver createDriver() {
         ConfigReader config = ConfigReader.getInstance();
         boolean headless = config.isHeadless();
 
@@ -73,26 +69,7 @@ public final class DriverFactory {
 
         driver.manage().window().setSize(new Dimension(WIDTH, HEIGHT));
         driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(config.getTimeout() * 4L));
-        DRIVER.set(driver);
-        LOG.info("Khởi tạo {} (headless={})", config.getBrowser(), headless);
+        LogUtils.info("Khởi tạo {} (headless={})", config.getBrowser(), headless);
         return driver;
-    }
-
-    public static WebDriver getDriver() {
-        return DRIVER.get();
-    }
-
-    public static void quitDriver() {
-        WebDriver driver = DRIVER.get();
-        if (driver != null) {
-            try {
-                driver.quit();
-            } catch (WebDriverException e) {
-                // ChromeDriver đã chết trước khi đóng (Connection reset) — lỗi ở đây làm TestNG bỏ qua các test sau
-                LOG.warn("Không đóng được trình duyệt, bỏ qua: {}", e.getMessage().lines().findFirst().orElse(""));
-            } finally {
-                DRIVER.remove();
-            }
-        }
     }
 }

@@ -1,8 +1,12 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
+import com.danghoang.pages.ColorListPage.RowButton;
 import com.danghoang.utils.EnvReferenceData;
 import com.danghoang.pages.ColorEditPage;
 import com.danghoang.pages.ColorListPage;
+import com.danghoang.pages.DashboardPage;
 import com.danghoang.pages.LoginPage;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
@@ -29,12 +33,11 @@ public class ColorListTest extends ColorTestBase {
     @Description("Kiểm tra vào Products → Colors thì mở /admin/colors với tiêu đề All Colors, sidebar tô sáng Colors; ô tìm có gợi ý đúng; bảng 3 cột #, Name, Options, cột Name chỉ có chữ; mỗi dòng có nút Edit, Delete; thẻ Add New Color có 2 ô rỗng và nút Save; thẻ Color filter activation có công tắc.")
     public void testAllColorsElements() {
         tc("AEC_COLOR_TC_001", "smoke", "colors", "auth", "ui");
-        loginAsAdmin();
-        ColorListPage list = new ColorListPage(driver());
+        DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Bấm Products → Colors ở sidebar", list::openFromSidebar);
+        ColorListPage list = act("Bấm Products → Colors ở sidebar", dashboard::goToColors);
 
-        Allure.step("Assert: Bảng kiểm màn All Colors", () -> {
+        verify("Bảng kiểm màn All Colors", () -> {
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/colors", "Đường dẫn");
             Assert.assertTrue(list.isTitleDisplayed(), "Tiêu đề All Colors");
             Assert.assertTrue(list.isColorsMenuActive(), "Mục Colors ở sidebar phải được tô sáng");
@@ -66,22 +69,22 @@ public class ColorListTest extends ColorTestBase {
         tc("AEC_COLOR_TC_003", "smoke", "colors", "auth");
         Allure.parameter("Biến thể", variant + " — " + entry);
         loginAsAdmin();
-        ColorListPage list = new ColorListPage(driver());
+        ColorListPage list = new ColorListPage();
         if ("edit".equals(entry)) {
             String name = "Col_" + newToken("TC003c");
             createColor(list, name, newCode());
             openEditOf(list, name);
         }
 
-        Allure.step("Act: Mở danh sách màu theo lối vào " + entry, () -> {
+        act("Mở danh sách màu theo lối vào " + entry, () -> {
             switch (entry) {
                 case "sidebar" -> list.openFromSidebar();
                 case "url" -> list.open();
-                default -> new ColorEditPage(driver()).clickColorsInSidebar();
+                default -> new ColorEditPage().clickColorsInSidebar();
             }
         });
 
-        Allure.step("Assert: Ở All Colors, sidebar tô sáng Colors", () -> {
+        verify("Ở All Colors, sidebar tô sáng Colors", () -> {
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/colors", "Đường dẫn");
             Assert.assertTrue(list.isTitleDisplayed(), "Tiêu đề All Colors");
             Assert.assertTrue(list.isColorsMenuActive(), "Mục Colors ở sidebar phải được tô sáng");
@@ -97,12 +100,9 @@ public class ColorListTest extends ColorTestBase {
         ColorListPage list = openColorsAsAdmin();
         createColor(list, name, newCode());
 
-        Allure.step("Act: Tìm " + name, () -> {
-            list.open();
-            list.search(name);
-        });
+        act("Tìm " + name, () -> list.searchFor(name));
 
-        Allure.step("Assert: Đúng 1 dòng là màu test, ô tìm giữ từ khoá", () -> {
+        verify("Đúng 1 dòng là màu test, ô tìm giữ từ khoá", () -> {
             Assert.assertTrue(list.currentUrl().contains("search=" + name), "Địa chỉ phải có từ khoá: " + list.currentUrl());
             Assert.assertEquals(list.names(), List.of(name), "Kết quả tìm");
             Assert.assertEquals(list.searchValue(), name, "Ô tìm giữ từ khoá");
@@ -116,20 +116,20 @@ public class ColorListTest extends ColorTestBase {
         tc("AEC_COLOR_TC_008", "regression", "colors", "auth");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Assert: Trang 1 có 10 dòng, # từ 1 đến 10, có phân trang", () -> {
+        verify("Trang 1 có 10 dòng, # từ 1 đến 10, có phân trang", () -> {
             Assert.assertEquals(list.rowNumbers(), IntStream.rangeClosed(1, 10).boxed().toList(), "Cột # trang 1");
             Assert.assertTrue(list.hasPagination(), "Phải có thanh phân trang");
         });
 
-        Allure.step("Act: Bấm trang 2", () -> list.clickPage("2"));
-        Allure.step("Assert: Trang 2 có # từ 11 đến 20", () -> {
+        act(StepNames.CLICK_PAGE_2, () -> list.clickPage("2"));
+        verify("Trang 2 có # từ 11 đến 20", () -> {
             Assert.assertTrue(list.currentUrl().contains("page=2"), "Địa chỉ phải có page=2: " + list.currentUrl());
             Assert.assertEquals(list.rowNumbers(), IntStream.rangeClosed(11, 20).boxed().toList(), "Cột # trang 2");
         });
 
         int last = list.lastPageNumber();
-        Allure.step("Act: Bấm số trang cuối " + last, () -> list.clickPage(String.valueOf(last)));
-        Allure.step("Assert: Số # trang cuối liên tục, không nhảy số", () -> {
+        act("Bấm số trang cuối " + last, () -> list.clickPage(String.valueOf(last)));
+        verify("Số # trang cuối liên tục, không nhảy số", () -> {
             List<Integer> numbers = list.rowNumbers();
             int first = (last - 1) * 10 + 1;
             Assert.assertEquals(numbers, IntStream.range(first, first + numbers.size()).boxed().toList(), "Cột # trang cuối");
@@ -139,37 +139,37 @@ public class ColorListTest extends ColorTestBase {
 
     @DataProvider(name = "rowButtons", parallel = true)
     public Object[][] rowButtons() {
-        return new Object[][]{{"a", 0, "Edit"}, {"b", 1, "Delete"}};
+        return new Object[][]{{"a", RowButton.EDIT, "Edit"}, {"b", RowButton.DELETE, "Delete"}};
     }
 
     @Test(dataProvider = "rowButtons", groups = {"regression", "colors", "auth"}, description = "Hai nút ở cột Options")
     @Severity(SeverityLevel.NORMAL)
     @Description("Kiểm tra rê chuột lên nút thứ nhất hiện Edit, bấm thì mở Color Information của màu test; nút thứ hai hiện Delete, bấm thì mở hộp Delete Confirmation mà địa chỉ không đổi (bấm Cancel để đóng).")
-    public void testOptionsButtons(String variant, int button, String title) {
+    public void testOptionsButtons(String variant, RowButton button, String title) {
         tc("AEC_COLOR_TC_009", "regression", "colors", "auth");
         Allure.parameter("Biến thể", variant + " — " + title);
         String name = "Col_" + newToken("TC009" + variant);
         ColorListPage list = openColorsAsAdmin();
         createColor(list, name, newCode());
-        int row = findRow(list, name, name);
+        int row = list.findRow(name);
         String url = list.currentUrl();
 
-        Allure.step("Assert: Rê chuột lên nút hiện " + title, () ->
+        verify("Rê chuột lên nút hiện " + title, () ->
                 Assert.assertEquals(list.hoverRowButton(row, button), title, "Chú thích nút"));
 
-        if (button == 0) {
-            ColorEditPage edit = Allure.step("Act: Bấm nút Edit", () -> list.editRow(row));
-            Allure.step("Assert: Mở trang Color Information của màu test", () -> {
+        if (button == RowButton.EDIT) {
+            ColorEditPage edit = act(StepNames.CLICK_EDIT, () -> list.editRow(row));
+            verify("Mở trang Color Information của màu test", () -> {
                 Assert.assertTrue(edit.isTitleDisplayed(), "Tiêu đề Color Information");
                 Assert.assertEquals(edit.nameValue(), name, "Ô Name");
             });
         } else {
-            Allure.step("Act: Bấm nút Delete", () -> list.openDeleteOfRow(row));
-            Allure.step("Assert: Hộp Delete Confirmation mở, địa chỉ không đổi", () -> {
+            act(StepNames.CLICK_DELETE, () -> list.openDeleteOfRow(row));
+            verify("Hộp Delete Confirmation mở, địa chỉ không đổi", () -> {
                 Assert.assertEquals(list.deleteModalTitle(), "Delete Confirmation", "Tiêu đề hộp");
                 Assert.assertEquals(list.currentUrl(), url, "Thanh địa chỉ không được đổi");
             });
-            Allure.step("Act: Bấm Cancel đóng hộp", () -> list.closeDeleteModal(ColorListPage.CloseBy.CANCEL));
+            act("Bấm Cancel đóng hộp", () -> list.closeDeleteModal(ColorListPage.CloseBy.CANCEL));
         }
     }
 
@@ -190,12 +190,9 @@ public class ColorListTest extends ColorTestBase {
         ColorListPage list = openColorsAsAdmin();
         createColor(list, name, newCode());
 
-        Allure.step("Act: Tìm " + keyword, () -> {
-            list.open();
-            list.search(keyword);
-        });
+        act("Tìm " + keyword, () -> list.searchFor(keyword));
 
-        Allure.step("Assert: Bảng có dòng màu test", () ->
+        verify("Bảng có dòng màu test", () ->
                 Assert.assertTrue(list.rowIndexOf(name) >= 0, "Kết quả phải có " + name + ", thực tế " + list.names()));
     }
 
@@ -207,14 +204,14 @@ public class ColorListTest extends ColorTestBase {
         String keyword = MULTI_PAGE_KEYWORD;
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tìm " + keyword, () -> list.search(keyword));
-        Allure.step("Assert: Có phân trang, mọi dòng chứa " + keyword, () -> {
+        act("Tìm " + keyword, () -> list.search(keyword));
+        verify("Có phân trang, mọi dòng chứa " + keyword, () -> {
             Assert.assertTrue(list.hasPagination(), "Phải có thanh phân trang");
             Assert.assertEquals(list.rowIndexesContaining(keyword).size(), list.rowCount(), "Mọi dòng phải chứa từ khoá: " + list.names());
         });
 
-        Allure.step("Act: Bấm trang 2", () -> list.clickPage("2"));
-        Allure.step("Assert: Trang 2 vẫn giữ từ khoá", () -> {
+        act(StepNames.CLICK_PAGE_2, () -> list.clickPage("2"));
+        verify("Trang 2 vẫn giữ từ khoá", () -> {
             Assert.assertTrue(list.currentUrl().contains("search=" + keyword), "Địa chỉ phải có search: " + list.currentUrl());
             Assert.assertTrue(list.currentUrl().contains("page=2"), "Địa chỉ phải có page=2: " + list.currentUrl());
             Assert.assertEquals(list.searchValue(), keyword, "Ô tìm");
@@ -231,9 +228,9 @@ public class ColorListTest extends ColorTestBase {
         String keyword = "zzqKhongCo" + System.currentTimeMillis() / 1000;
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tìm " + keyword, () -> list.search(keyword));
+        act("Tìm " + keyword, () -> list.search(keyword));
 
-        Allure.step("Assert: Nothing found, không có phân trang", () -> {
+        verify("Nothing found, không có phân trang", () -> {
             Assert.assertTrue(list.isNothingFoundShown(), "Phải hiện Nothing found");
             Assert.assertFalse(list.hasPagination(), "Không được có thanh phân trang");
         });
@@ -246,7 +243,7 @@ public class ColorListTest extends ColorTestBase {
         tc("AEC_COLOR_TC_039", "regression", "colors", "auth", "ui");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Assert: Thẻ Color filter activation có công tắc", () -> {
+        verify("Thẻ Color filter activation có công tắc", () -> {
             Assert.assertTrue(list.cardHeaders().contains("Color filter activation"), "Tiêu đề thẻ");
             Assert.assertTrue(list.hasFilterSwitch(), "Phải có công tắc");
             Allure.parameter("Trạng thái công tắc", list.isFilterSwitchOn() ? "bật" : "tắt");
@@ -265,23 +262,18 @@ public class ColorListTest extends ColorTestBase {
     public void testColorPagesRequireLogin(String variant, String path) {
         tc("AEC_COLOR_TC_043", "regression", "colors", "security");
         Allure.parameter("Biến thể", variant + " — " + path);
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
+        act("Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
-        Allure.step("Assert: Về trang đăng nhập", () -> {
+        verify(StepNames.BACK_AT_LOGIN, () -> {
             loginPage.waitForPath("/login");
             Assert.assertEquals(loginPage.currentPath(), "/login", "Phải chuyển về /login");
             Assert.assertTrue(loginPage.isHeadingDisplayed(), "Phải thấy form đăng nhập");
         });
     }
 
-    @DataProvider(name = "injectionKeywords", parallel = true)
-    public Object[][] injectionKeywords() {
-        return new Object[][]{{"a", "<script>alert(1)</script>zzq"}, {"b", "' OR '1'='1 zzq"}};
-    }
-
-    @Test(dataProvider = "injectionKeywords", groups = {"regression", "colors", "auth", "security"},
+    @Test(dataProvider = "injectionKeywords", dataProviderClass = DataProviderFactory.class, groups = {"regression", "colors", "auth", "security"},
             description = "Mã script và chuỗi SQL ở ô tìm được xử lý như chữ")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra tìm bằng chuỗi script và chuỗi SQL thì không bật hộp thoại, không ra trang lỗi, bảng hiện Nothing found, ô tìm giữ nguyên chuỗi.")
@@ -291,9 +283,9 @@ public class ColorListTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + keyword);
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tìm " + keyword, () -> list.search(keyword));
+        act("Tìm " + keyword, () -> list.search(keyword));
 
-        Allure.step("Assert: Không hộp thoại, không trang lỗi, Nothing found, ô tìm giữ chuỗi", () -> {
+        verify("Không hộp thoại, không trang lỗi, Nothing found, ô tìm giữ chuỗi", () -> {
             Assert.assertFalse(list.isAlertOpen(), "Không được bật hộp thoại");
             Assert.assertFalse(list.isServerErrorPage(), "Không được ra trang lỗi");
             Assert.assertTrue(list.isNothingFoundShown(), "Phải hiện Nothing found");
@@ -301,12 +293,7 @@ public class ColorListTest extends ColorTestBase {
         });
     }
 
-    @DataProvider(name = "windowSizes", parallel = true)
-    public Object[][] windowSizes() {
-        return new Object[][]{{"a", 1920, 1080}, {"b", 1366, 768}};
-    }
-
-    @Test(dataProvider = "windowSizes", groups = {"regression", "colors", "auth", "responsive"},
+    @Test(dataProvider = "windowSizes", dataProviderClass = DataProviderFactory.class, groups = {"regression", "colors", "auth", "responsive"},
             description = "Trang All Colors dùng được ở màn rộng và màn hẹp")
     @Severity(SeverityLevel.NORMAL)
     @Description("Kiểm tra ở 1920×1080: bảng và các thẻ cạnh nhau, đủ 3 cột, không cuộn ngang; ở 1366×768: đọc được tên màu, 2 nút thao tác, ô Name, Color Code, nút Save. Cả hai: bấm Delete dòng 1 mở hộp xác nhận rồi Cancel. Phần chữ đè nhau kiểm tay (Partial).")
@@ -314,14 +301,14 @@ public class ColorListTest extends ColorTestBase {
         tc("AEC_COLOR_TC_049", "regression", "colors", "auth", "responsive");
         Allure.parameter("Biến thể", variant + " — " + width + "×" + height);
         loginAsAdmin();
-        ColorListPage list = new ColorListPage(driver());
+        ColorListPage list = new ColorListPage();
 
-        Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All Colors", () -> {
+        act("Đặt cửa sổ " + width + "×" + height + " rồi mở All Colors", () -> {
             browser().resize(width, height);
             list.open();
         });
 
-        Allure.step("Assert: Bố cục dùng được", () -> {
+        verify("Bố cục dùng được", () -> {
             Assert.assertEquals(list.cardHeaders(), List.of("Colors", "Add New Color", "Color filter activation"), "Bảng và các thẻ");
             Assert.assertTrue(list.names().stream().noneMatch(String::isBlank), "Tên màu phải đọc được");
             Assert.assertTrue(list.everyRowHasEditAndDelete(), "Mỗi dòng phải có 2 nút thao tác");
@@ -333,9 +320,9 @@ public class ColorListTest extends ColorTestBase {
             }
         });
 
-        Allure.step("Act: Bấm Delete ở dòng 1", () -> list.openDeleteOfRow(0));
-        Allure.step("Assert: Hộp xác nhận mở ra", () ->
+        act("Bấm Delete ở dòng 1", () -> list.openDeleteOfRow(0));
+        verify("Hộp xác nhận mở ra", () ->
                 Assert.assertEquals(list.deleteModalTitle(), "Delete Confirmation", "Tiêu đề hộp"));
-        Allure.step("Act: Bấm Cancel", () -> list.closeDeleteModal(ColorListPage.CloseBy.CANCEL));
+        act(StepNames.CLICK_CANCEL, () -> list.closeDeleteModal(ColorListPage.CloseBy.CANCEL));
     }
 }

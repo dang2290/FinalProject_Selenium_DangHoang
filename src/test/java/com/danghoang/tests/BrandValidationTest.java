@@ -1,5 +1,6 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
 import com.danghoang.utils.EnvReferenceData;
 import com.danghoang.pages.BrandEditPage;
 import com.danghoang.pages.BrandPage;
@@ -45,17 +46,16 @@ public class BrandValidationTest extends BrandTestBase {
         Allure.parameter("Biến thể", variant + " — " + (typeThenClear ? "gõ abc rồi xoá hết" : "không gõ gì"));
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Chuẩn bị ô Name, nhập Meta Title, bấm Save", () -> {
+        act("Chuẩn bị ô Name, nhập Meta Title rồi bấm Save", () -> {
             if (typeThenClear) {
                 brandPage.enterNewBrandName("abc");
                 brandPage.clearName();
             }
             brandPage.enterMetaTitle("Meta TC021");
-            brandPage.markPage();
             brandPage.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name, form giữ nguyên", () -> {
+        verify("Trình duyệt chặn ở ô Name, form giữ nguyên", () -> {
             Assert.assertFalse(brandPage.nameValidationMessage().isEmpty(), "Phải có cảnh báo dưới ô Name");
             Assert.assertTrue(brandPage.isSamePageInstance(), "Trang không được tải lại");
             Assert.assertTrue(brandPage.isNameFocused(), "Con trỏ phải nằm trong ô Name");
@@ -79,14 +79,14 @@ public class BrandValidationTest extends BrandTestBase {
         String name = padTo("AutoBVA" + length + "_" + token + "_", 'x', length);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name " + length + " ký tự rồi Save", () -> brandPage.createBrand(name));
+        act("Nhập Name " + length + " ký tự rồi Save", () -> brandPage.createBrand(name));
 
-        Allure.step("Assert: Lưu thành công", () ->
+        verify(StepNames.SAVED, () ->
                 Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
 
         BrandEditPage editPage = openEditOf(brandPage, token);
 
-        Allure.step("Assert: Form sửa giữ đủ " + length + " ký tự", () ->
+        verify("Form sửa giữ đủ " + length + " ký tự", () ->
                 Assert.assertEquals(editPage.nameValue(), name, "Name không được bị cắt"));
     }
 
@@ -106,16 +106,15 @@ public class BrandValidationTest extends BrandTestBase {
         String name = padTo("AutoBVA" + length + "_" + token + "_", 'x', length);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name " + length + " ký tự rồi Save", () -> brandPage.createBrand(name));
+        act("Nhập Name " + length + " ký tự rồi Save", () -> brandPage.createBrand(name));
 
-        Allure.step("Assert: Không ra trang lỗi máy chủ, không báo tạo thành công", () -> {
+        verify("Không ra trang lỗi máy chủ, không báo tạo thành công", () -> {
             Assert.assertFalse(brandPage.isServerErrorPage(), "Không được ra trang lỗi máy chủ");
             Assert.assertNotEquals(brandPage.getNotifyMessage(), INSERTED, "Không được báo tạo thành công");
         });
 
-        Allure.step("Assert: Không có brand nào được tạo", () -> {
-            brandPage.open();
-            brandPage.search(token);
+        verify("Không có brand nào được tạo", () -> {
+            brandPage.searchFor(token);
             Assert.assertEquals(brandPage.rowCount(), 0, "Brand quá dài không được lưu");
         });
     }
@@ -141,19 +140,19 @@ public class BrandValidationTest extends BrandTestBase {
         Allure.parameter("Biến thể", variant + " — " + name);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name rồi Save", () -> brandPage.createBrand(name));
+        act(StepNames.ENTER_NAME_AND_SAVE, () -> brandPage.createBrand(name));
 
-        Allure.step("Assert: Lưu thành công", () ->
+        verify(StepNames.SAVED, () ->
                 Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
 
-        Allure.step("Assert: Danh sách hiện đúng nguyên văn", () -> {
+        verify("Danh sách hiện đúng nguyên văn", () -> {
             brandPage.search(token);
-            Assert.assertEquals(brandPage.getResultNames(), List.of(name), "Tên ở danh sách");
+            Assert.assertEquals(brandPage.names(), List.of(name), "Tên ở danh sách");
         });
 
-        BrandEditPage editPage = Allure.step("Act: Mở form sửa", brandPage::editFirstResult);
+        BrandEditPage editPage = act(StepNames.OPEN_EDIT_FORM, brandPage::editFirstResult);
 
-        Allure.step("Assert: Form sửa đúng nguyên văn", () ->
+        verify(StepNames.EDIT_FORM_VERBATIM, () ->
                 Assert.assertEquals(editPage.nameValue(), name, "Ô Name ở form sửa"));
     }
 
@@ -177,25 +176,25 @@ public class BrandValidationTest extends BrandTestBase {
         Allure.parameter("Biến thể", variant + " — " + name);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name rồi Save", () -> brandPage.createBrand(name));
+        act(StepNames.ENTER_NAME_AND_SAVE, () -> brandPage.createBrand(name));
 
-        Allure.step("Assert: Sau khi lưu — không có hộp thoại", () ->
+        verify("Sau khi lưu — không có hộp thoại", () ->
                 Assert.assertFalse(brandPage.isAlertOpen(), "Không được bật hộp thoại sau khi lưu"));
 
-        Allure.step("Assert: Danh sách hiện đúng chuỗi dạng chữ", () -> {
+        verify("Danh sách hiện đúng chuỗi dạng chữ", () -> {
             brandPage.search(token);
             Assert.assertFalse(brandPage.isAlertOpen(), "Không được bật hộp thoại ở danh sách");
-            Assert.assertEquals(brandPage.getResultNames(), List.of(name), "Tên ở danh sách");
+            Assert.assertEquals(brandPage.names(), List.of(name), "Tên ở danh sách");
         });
 
-        Allure.step("Assert: Form sửa đúng nguyên văn", () -> {
+        verify(StepNames.EDIT_FORM_VERBATIM, () -> {
             BrandEditPage editPage = brandPage.editFirstResult();
             Assert.assertFalse(editPage.isAlertOpen(), "Không được bật hộp thoại ở form sửa");
             Assert.assertEquals(editPage.nameValue(), name, "Ô Name ở form sửa");
         });
 
-        Allure.step("Assert: Dropdown Brand của Add New Product hiện đúng chuỗi", () -> {
-            ProductCreatePage productPage = new ProductCreatePage(driver()).open();
+        verify("Dropdown Brand của Add New Product hiện đúng chuỗi", () -> {
+            ProductCreatePage productPage = new ProductCreatePage().open();
             Assert.assertFalse(productPage.isAlertOpen(), "Không được bật hộp thoại ở form sản phẩm");
             Assert.assertEquals(productPage.brandOptionsContaining(token), List.of(name), "Lựa chọn trong dropdown Brand");
         });
@@ -209,17 +208,17 @@ public class BrandValidationTest extends BrandTestBase {
         String name = "AutoTrim_" + newToken("TC028");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name có khoảng trắng đầu/cuối rồi Save", () -> brandPage.createBrand("   " + name + "   "));
+        act("Nhập Name có khoảng trắng đầu/cuối rồi bấm Save", () -> brandPage.createBrand("   " + name + "   "));
 
-        Allure.step("Assert: Lưu thành công, tìm ra đúng 1 dòng", () -> {
+        verify("Lưu thành công, tìm ra đúng 1 dòng", () -> {
             Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
             brandPage.search(name);
             Assert.assertEquals(brandPage.rowCount(), 1, "Số dòng tìm được");
         });
 
-        BrandEditPage editPage = Allure.step("Act: Mở form sửa", brandPage::editFirstResult);
+        BrandEditPage editPage = act(StepNames.OPEN_EDIT_FORM, brandPage::editFirstResult);
 
-        Allure.step("Assert: Name không còn khoảng trắng thừa", () ->
+        verify("Name không còn khoảng trắng thừa", () ->
                 Assert.assertEquals(editPage.nameValue(), name, "Name sau khi lưu"));
     }
 
@@ -231,15 +230,15 @@ public class BrandValidationTest extends BrandTestBase {
         String name = "AutoDup_" + newToken("TC029");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Tạo brand lần 1", () -> brandPage.createBrand(name));
-        Allure.step("Act: Tạo brand lần 2 cùng Name", () -> {
+        act("Tạo brand lần 1", () -> brandPage.createBrand(name));
+        act("Tạo brand lần 2 cùng Name", () -> {
             brandPage.createBrand(name);
             Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Lần 2 phải lưu thành công, không báo trùng");
         });
 
-        Allure.step("Assert: Tìm theo Name ra đúng 2 dòng", () -> {
+        verify("Tìm theo Name ra đúng 2 dòng", () -> {
             brandPage.search(name);
-            Assert.assertEquals(brandPage.getResultNames(), List.of(name, name), "Phải có 2 dòng cùng tên");
+            Assert.assertEquals(brandPage.names(), List.of(name, name), "Phải có 2 dòng cùng tên");
         });
     }
 
@@ -262,18 +261,18 @@ public class BrandValidationTest extends BrandTestBase {
         String name = "AutoMeta_" + newToken("TC030" + variant);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Meta Title rồi Save", () -> {
+        act("Nhập Name, Meta Title rồi bấm Save", () -> {
             brandPage.enterNewBrandName(name);
             brandPage.enterMetaTitle(metaTitle);
             brandPage.saveAndWait();
         });
 
-        Allure.step("Assert: Lưu thành công", () ->
+        verify(StepNames.SAVED, () ->
                 Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
 
         BrandEditPage editPage = openEditOf(brandPage, name);
 
-        Allure.step("Assert: Meta Title đúng nguyên văn", () ->
+        verify("Meta Title đúng nguyên văn", () ->
                 Assert.assertEquals(editPage.metaTitleValue(), metaTitle, "Meta Title ở form sửa"));
     }
 
@@ -285,20 +284,19 @@ public class BrandValidationTest extends BrandTestBase {
         String name = "AutoMeta_" + newToken("TC031");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Meta Title 256 ký tự rồi Save", () -> {
+        act("Nhập Name, Meta Title 256 ký tự rồi bấm Save", () -> {
             brandPage.enterNewBrandName(name);
             brandPage.enterMetaTitle(padTo("MetaTitle256_", 'm', 256));
             brandPage.saveAndWait();
         });
 
-        Allure.step("Assert: Không ra trang lỗi máy chủ, không báo tạo thành công", () -> {
+        verify("Không ra trang lỗi máy chủ, không báo tạo thành công", () -> {
             Assert.assertFalse(brandPage.isServerErrorPage(), "Không được ra trang lỗi máy chủ");
             Assert.assertNotEquals(brandPage.getNotifyMessage(), INSERTED, "Không được báo tạo thành công");
         });
 
-        Allure.step("Assert: Không có brand nào được tạo", () -> {
-            brandPage.open();
-            brandPage.search(name);
+        verify("Không có brand nào được tạo", () -> {
+            brandPage.searchFor(name);
             Assert.assertEquals(brandPage.rowCount(), 0, "Brand có Meta Title quá dài không được lưu");
         });
     }
@@ -322,20 +320,20 @@ public class BrandValidationTest extends BrandTestBase {
         String name = "AutoDesc_" + newToken("TC032" + variant);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Meta description rồi Save", () -> {
+        act("Nhập Name, Meta description rồi bấm Save", () -> {
             brandPage.enterNewBrandName(name);
             brandPage.enterMetaDescription(metaDescription);
             brandPage.saveAndWait();
         });
 
-        Allure.step("Assert: Lưu thành công, không bật hộp thoại", () -> {
+        verify("Lưu thành công, không bật hộp thoại", () -> {
             Assert.assertFalse(brandPage.isAlertOpen(), "Không được bật hộp thoại");
             Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
         });
 
         BrandEditPage editPage = openEditOf(brandPage, name);
 
-        Allure.step("Assert: Meta description đúng nguyên văn", () -> {
+        verify("Meta description đúng nguyên văn", () -> {
             Assert.assertFalse(editPage.isAlertOpen(), "Không được bật hộp thoại ở form sửa");
             Assert.assertEquals(editPage.metaDescriptionValue(), metaDescription, "Meta description ở form sửa");
         });
@@ -348,9 +346,9 @@ public class BrandValidationTest extends BrandTestBase {
         tc("AEC_BRAND_TC_033", "regression", "brand", "auth", "ui");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        MediaLibraryModal library = Allure.step("Act: Bấm Browse ở ô Logo", brandPage::openLogoLibrary);
+        MediaLibraryModal library = act("Bấm Browse ở ô Logo", brandPage::openLogoLibrary);
 
-        Allure.step("Assert: Bảng kiểm hộp thư viện", () -> {
+        verify("Bảng kiểm hộp thư viện", () -> {
             Assert.assertEquals(library.tabs(), List.of("Select File", "Upload New"), "Hai tab");
             Assert.assertEquals(library.activeTab(), "Select File", "Tab đang chọn");
             Assert.assertEquals(library.selectedSort(), "Sort by newest", "Sắp xếp mặc định");
@@ -363,7 +361,7 @@ public class BrandValidationTest extends BrandTestBase {
             Assert.assertTrue(library.hasCloseIcon(), "Phải có nút đóng ×");
         });
 
-        Allure.step("Assert: Dropdown sắp xếp đủ 4 lựa chọn theo thứ tự", () ->
+        verify("Dropdown sắp xếp đủ 4 lựa chọn theo thứ tự", () ->
                 Assert.assertEquals(library.sortOptions(),
                         List.of("Sort by newest", "Sort by oldest", "Sort by smallest", "Sort by largest"), "Lựa chọn sắp xếp"));
     }
@@ -382,10 +380,10 @@ public class BrandValidationTest extends BrandTestBase {
         Allure.parameter("Biến thể", variant + " — " + closeBy);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        MediaLibraryModal library = Allure.step("Act: Bấm Browse ở ô Logo", brandPage::openLogoLibrary);
-        Allure.step("Act: Đóng hộp bằng " + closeBy, () -> library.close(closeBy));
+        MediaLibraryModal library = act("Bấm Browse ở ô Logo", brandPage::openLogoLibrary);
+        act("Đóng hộp bằng " + closeBy, () -> library.close(closeBy));
 
-        Allure.step("Assert: Hộp đóng, ô Logo vẫn trống", () -> {
+        verify("Hộp đóng, ô Logo vẫn trống", () -> {
             Assert.assertTrue(library.waitUntilClosed(), "Hộp thư viện phải đóng");
             Assert.assertEquals(brandPage.logoAmountText(), "Choose File", "Ô Logo");
             Assert.assertEquals(brandPage.logoPreviewCount(), 0, "Không được có ảnh thu nhỏ");
@@ -399,35 +397,35 @@ public class BrandValidationTest extends BrandTestBase {
         tc("AEC_BRAND_TC_035", "regression", "brand", "auth");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        MediaLibraryModal library = Allure.step("Arrange: Mở thư viện, lọc " + MEDIA_KEYWORD, () -> {
+        MediaLibraryModal library = arrange("Mở thư viện, lọc " + MEDIA_KEYWORD, () -> {
             MediaLibraryModal modal = brandPage.openLogoLibrary();
             modal.search(MEDIA_KEYWORD);
             return modal;
         });
 
-        Allure.step("Act: Bấm ảnh thứ nhất", () -> library.selectFile(0));
-        Allure.step("Assert: Ảnh thứ nhất được đánh dấu, 1 File selected", () -> {
+        act("Bấm ảnh thứ nhất", () -> library.selectFile(0));
+        verify("Ảnh thứ nhất được đánh dấu, 1 File selected", () -> {
             Assert.assertEquals(library.selectedIndexes(), List.of(0), "Ảnh được đánh dấu");
             Assert.assertEquals(library.selectedCountText(), "1 File selected", "Chân hộp");
         });
 
-        Allure.step("Act: Bấm ảnh thứ hai", () -> library.selectFile(1));
-        Allure.step("Assert: Chỉ ảnh thứ hai được đánh dấu, vẫn 1 File selected", () -> {
+        act("Bấm ảnh thứ hai", () -> library.selectFile(1));
+        verify("Chỉ ảnh thứ hai được đánh dấu, vẫn 1 File selected", () -> {
             Assert.assertEquals(library.selectedIndexes(), List.of(1), "Ảnh được đánh dấu");
             Assert.assertEquals(library.selectedCountText(), "1 File selected", "Chân hộp");
         });
 
-        Allure.step("Act: Bấm Clear", library::clearSelection);
-        Allure.step("Assert: Không ảnh nào được đánh dấu, 0 File selected", () -> {
+        act("Bấm Clear", library::clearSelection);
+        verify("Không ảnh nào được đánh dấu, 0 File selected", () -> {
             Assert.assertEquals(library.selectedIndexes(), List.of(), "Ảnh được đánh dấu");
             Assert.assertEquals(library.selectedCountText(), "0 File selected", "Chân hộp");
         });
 
-        Allure.step("Act: Bấm ảnh thứ nhất rồi Add Files", () -> {
+        act("Bấm ảnh thứ nhất rồi Add Files", () -> {
             library.selectFile(0);
             library.addFiles();
         });
-        Allure.step("Assert: Hộp đóng, ô Logo báo 1 File selected và có ô xem trước", () -> {
+        verify("Hộp đóng, ô Logo báo 1 File selected và có ô xem trước", () -> {
             Assert.assertEquals(brandPage.logoAmountText(), "1 File selected", "Ô Logo");
             Assert.assertEquals(brandPage.logoPreviewCount(), 1, "Ô xem trước ảnh");
         });

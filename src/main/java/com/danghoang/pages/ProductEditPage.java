@@ -1,9 +1,9 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 
 import java.util.List;
 
@@ -11,21 +11,20 @@ import java.util.List;
  * Trang Edit Product /admin/products/admin/{id}/edit?lang=en|vn — tab English / Vietnamese, ô Slug, một nút Update Product,
  * form gửi tới /admin/products/update/{id}. Locator lấy từ DOM thật 04-11-2026.
  */
-public class ProductEditPage extends BasePage {
+public class ProductEditPage extends TranslatableFormPage {
 
+    /** JS: chữ lựa chọn đang chọn của thẻ select name = arguments[0] ("" nếu không có thẻ hoặc chưa chọn). */
+    private static final String JS_SELECTED_OPTION_TEXT = "const s=document.querySelector('select[name=\"'+arguments[0]+'\"]');"
+            + "return s && s.selectedOptions.length ? s.selectedOptions[0].textContent.trim() : '';";
     private static final String EDIT_FORM = "//form[contains(@action,'/admin/products/update/')]";
 
     private static final By PAGE_TITLE = By.xpath("//h1[normalize-space()='Edit Product']");
-    private static final By LANGUAGE_TABS = By.cssSelector("a.nav-link[href*='/edit?lang=']");
-    private static final By ACTIVE_TAB = By.cssSelector("a.nav-link.active[href*='/edit?lang=']");
+    private static final By NAME_INPUT = By.xpath(EDIT_FORM + "//*[@name='name']");
     private static final By UPDATE_BUTTON = By.xpath(EDIT_FORM + "//button[@type='submit']");
-    private static final By ERROR_MESSAGES = By.cssSelector("div.alert-danger li");
     private static final By VARIANT_NAMES = By.cssSelector("#sku_combination tr.variant label");
-    private static final By THUMBNAIL_PREVIEW = By.xpath("//input[@name='thumbnail_img']/ancestor::div[contains(@class,'input-group')]"
-            + "/following-sibling::div[contains(@class,'file-preview')]/div");
 
-    public ProductEditPage(WebDriver driver) {
-        super(driver);
+    public ProductEditPage() {
+        super(PAGE_TITLE, NAME_INPUT, "/edit?lang=");
     }
 
     @Step("Mở trang sửa sản phẩm id {id} tab {lang}")
@@ -35,12 +34,8 @@ public class ProductEditPage extends BasePage {
     }
 
     public ProductEditPage waitUntilLoaded() {
-        waitForVisible(PAGE_TITLE);
+        waitForForm();
         return this;
-    }
-
-    public boolean isTitleDisplayed() {
-        return isPresentNow(PAGE_TITLE);
     }
 
     public boolean isOnEditPage() {
@@ -51,58 +46,38 @@ public class ProductEditPage extends BasePage {
         return currentPath().replaceAll(".*/admin/(\\d+)/edit.*", "$1");
     }
 
-    public List<String> languageTabs() {
-        return driver.findElements(LANGUAGE_TABS).stream().map(e -> e.getText().trim()).toList();
+    public String fieldValue(FormField field) {
+        return WebUI.getElementValue(fieldInForm(field));
     }
 
-    public String activeTab() {
-        return getText(ACTIVE_TAB);
+    private By fieldInForm(FormField field) {
+        return By.xpath(EDIT_FORM + "//*[@name='" + field + "']");
     }
 
-    @Step("Chọn tab ngôn ngữ {tab}")
-    public void clickTab(String tab) {
-        WebElement target = driver.findElements(LANGUAGE_TABS).stream()
-                .filter(e -> e.getText().trim().equals(tab)).findFirst()
-                .orElseThrow(() -> new IllegalStateException("Không có tab " + tab));
-        andWaitForNewPage(target::click);
-        waitUntilLoaded();
-    }
-
-    public String fieldValue(String name) {
-        return driver.findElement(By.xpath(EDIT_FORM + "//*[@name='" + name + "']")).getAttribute("value");
-    }
-
-    public String nameValue() {
-        return fieldValue("name");
+    private By inputInForm(FormField field) {
+        return By.xpath(EDIT_FORM + "//input[@name='" + field + "']");
     }
 
     /** Chữ của lựa chọn đang chọn ở thẻ select gốc (Category, Brand, Discount type…). */
-    public String selectedOptionText(String name) {
-        return (String) js("const s=document.querySelector('select[name=\"'+arguments[0]+'\"]');"
-                + "return s && s.selectedOptions.length ? s.selectedOptions[0].textContent.trim() : '';", name);
+    public String selectedOptionText(FormField field) {
+        return (String) WebUI.executeJS(JS_SELECTED_OPTION_TEXT, field.toString());
     }
 
     public int updateButtonCount() {
-        return driver.findElements(UPDATE_BUTTON).size();
+        return WebUI.getElementCount(UPDATE_BUTTON);
     }
 
     public String updateButtonText() {
-        return driver.findElement(UPDATE_BUTTON).getText().trim();
+        return WebUI.getElementTextNow(UPDATE_BUTTON);
     }
 
-    @Step("Đổi {name} thành [{value}]")
-    public void enterField(String name, String value) {
-        By locator = By.xpath(EDIT_FORM + "//input[@name='" + name + "']");
-        WebElement field = driver.findElement(locator);
-        js("arguments[0].scrollIntoView({block:'center'});", field);
-        field.clear();
-        if (!value.isEmpty()) {
-            type(locator, value);
-        }
+    @Step("Đổi {field} thành [{value}]")
+    public void enterField(FormField field, String value) {
+        WebUI.scrollAndSetText(inputInForm(field), value);
     }
 
     public void enterName(String name) {
-        enterField("name", name);
+        enterField(FormField.NAME, name);
     }
 
     /** Bấm Update Product — không chờ (dùng khi phiên có thể đã hết). */
@@ -110,54 +85,31 @@ public class ProductEditPage extends BasePage {
     public void clickUpdate() {
         // Như form tạo: gõ Name / Unit price gọi AJAX update_sku() — chờ hết request nền rồi mới gửi form
         waitForAjaxIdle();
-        WebElement button = driver.findElement(UPDATE_BUTTON);
-        js("arguments[0].scrollIntoView({block:'center'});", button);
-        button.click();
+        WebUI.scrollAndClickElement(UPDATE_BUTTON);
     }
 
     @Step("Bấm Update Product và chờ trang tải lại")
-    public void updateAndWait() {
-        andWaitForNewPage(this::clickUpdate);
-        if (!isServerErrorPage()) {
-            waitUntilLoaded();
-        }
-    }
-
-    public List<String> errorMessages() {
-        return driver.findElements(ERROR_MESSAGES).stream().map(e -> e.getText().trim()).toList();
+    public void saveAndWait() {
+        andWaitUnlessError(this::clickUpdate, this::waitUntilLoaded);
     }
 
     /** Bảng tổ hợp được dựng bằng AJAX sau khi trang tải — chờ có dòng rồi mới đọc. */
     public List<String> variantNames() {
-        wait.until(d -> !d.findElements(VARIANT_NAMES).isEmpty());
-        return driver.findElements(VARIANT_NAMES).stream().map(e -> e.getAttribute("textContent").trim()).toList();
+        WebUI.waitUntil("bảng tổ hợp có dòng", () -> WebUI.checkElementExist(VARIANT_NAMES));
+        return WebUI.getWebElements(VARIANT_NAMES).stream().map(e -> e.getAttribute("textContent").trim()).toList();
     }
 
-    @SuppressWarnings("unchecked")
     public List<String> variantPrices() {
-        return (List<String>) js("return [...document.querySelectorAll('#sku_combination tr.variant input[name^=\"price_\"]')].map(i => i.value);");
+        return WebUI.getAllValuesByJS("#sku_combination tr.variant input[name^=\"price_\"]");
     }
 
-    /** Ảnh xem trước được dựng bằng AJAX sau khi trang tải — ô Thumbnail đã có id ảnh thì chờ ảnh hiện rồi mới đếm. */
+    /** Ô Thumbnail đã có id ảnh thì chờ ảnh xem trước dựng xong rồi mới đếm. */
     public int thumbnailPreviewCount() {
-        String imageId = fieldValue("thumbnail_img");
-        if (imageId != null && !imageId.isBlank()) {
-            try {
-                wait.until(d -> !d.findElements(THUMBNAIL_PREVIEW).isEmpty());
-            } catch (org.openqa.selenium.TimeoutException e) {
-                log.warn("Ô Thumbnail có id {} nhưng không dựng được ảnh xem trước", imageId);
-            }
-        }
-        return driver.findElements(THUMBNAIL_PREVIEW).size();
+        return previewCountWhenReady(fieldValue(FormField.THUMBNAIL), AdminLocators.THUMBNAIL_PREVIEW);
     }
 
     /** Tên tệp của ảnh Thumbnail đang xem trước — gọi sau thumbnailPreviewCount() để ảnh đã dựng xong. */
     public String thumbnailPreviewTitle() {
-        return driver.findElement(THUMBNAIL_PREVIEW).getAttribute("title");
-    }
-
-    /** Trang 419 PAGE EXPIRED — gửi form khi phiên đã hết. */
-    public boolean isPageExpired() {
-        return driver.getTitle().contains("Page Expired") || driver.getPageSource().contains("419");
+        return WebUI.getElementAttribute(AdminLocators.THUMBNAIL_PREVIEW, "title");
     }
 }

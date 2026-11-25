@@ -2,6 +2,7 @@ package com.danghoang.tests;
 
 import com.danghoang.pages.BrandPage;
 import com.danghoang.pages.CategoryFormPage;
+import com.danghoang.pages.FormField;
 import com.danghoang.pages.ProductCreatePage;
 import com.danghoang.pages.ProductCreatePage.SaveButton;
 import com.danghoang.pages.ProductEditPage;
@@ -9,7 +10,6 @@ import com.danghoang.pages.ProductListPage;
 import com.danghoang.pages.ProductListPage.RowSwitch;
 import com.danghoang.pages.StorefrontListingPage;
 import com.danghoang.pages.StorefrontProductPage;
-import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
@@ -40,25 +40,25 @@ public class ProductCrossModuleTest extends ProductTestBase {
 
     /** Bước 2–4 của TC_076: tạo Brand, Category (Physical), rồi sản phẩm chọn đúng hai mục đó và bấm Save &amp; Publish. */
     private void createBrandCategoryProduct(FlowData data) {
-        Allure.step("Act: Tạo brand " + data.brand(), () -> {
-            BrandPage brands = new BrandPage(driver()).open();
+        act("Tạo brand " + data.brand(), () -> {
+            BrandPage brands = new BrandPage().open();
             brands.createBrand(data.brand());
             Assert.assertEquals(brands.getNotifyMessage(), BRAND_INSERTED, "Thông báo sau khi tạo brand");
         });
-        Allure.step("Act: Tạo danh mục " + data.category() + " (Physical)", () -> {
-            CategoryFormPage category = new CategoryFormPage(driver()).openCreate();
+        act("Tạo danh mục " + data.category() + " (Physical)", () -> {
+            CategoryFormPage category = new CategoryFormPage().openCreate();
             category.enterName(data.category());
             Assert.assertEquals(category.typeShown(), "Physical", "Type mặc định của danh mục");
             category.saveAndWait();
             Assert.assertEquals(category.getNotifyMessage(), CATEGORY_INSERTED, "Thông báo sau khi tạo danh mục");
         });
-        Allure.step("Act: Tạo sản phẩm dùng Brand, Category vừa tạo, bấm Save & Publish", () -> {
-            ProductCreatePage form = new ProductCreatePage(driver()).open();
+        act("Tạo sản phẩm dùng Brand, Category vừa tạo rồi bấm Save & Publish", () -> {
+            ProductCreatePage form = new ProductCreatePage().open();
             form.chooseCategory(data.category());
             form.chooseBrand(data.brand());
             form.enterName(data.product());
             form.enterUnit("pc");
-            form.enterField("min_qty", "2");
+            form.enterField(FormField.MIN_QTY, "2");
             form.addTag("auto");
             form.enterUnitPrice("100");
             form.enterDiscount("10");
@@ -82,19 +82,18 @@ public class ProductCrossModuleTest extends ProductTestBase {
 
         createBrandCategoryProduct(data);
 
-        ProductListPage list = new ProductListPage(driver());
-        Allure.step("Assert: All products có đúng 1 dòng, giá, kho, Published đúng", () -> {
-            list.open();
-            list.search(data.product());
+        ProductListPage list = new ProductListPage();
+        verify("All products có đúng 1 dòng, giá, kho, Published đúng", () -> {
+            list.searchFor(data.product());
             Assert.assertEquals(list.names(), java.util.List.of(data.product()), "Kết quả tìm");
             Assert.assertEquals(list.basePriceOfRow(0), "$100.00", "Base Price");
             Assert.assertEquals(list.totalStockOfRow(0), "20", "Total Stock");
             Assert.assertTrue(list.isSwitchOn(0, RowSwitch.PUBLISHED), "Published phải bật");
         });
-        Allure.step("Assert: Trang sửa hiện đúng Category, Brand vừa tạo", () -> {
+        verify("Trang sửa hiện đúng Category, Brand vừa tạo", () -> {
             ProductEditPage edit = list.editRow(0);
-            Assert.assertEquals(edit.selectedOptionText("category_id").replaceFirst("^-+\\s*", ""), data.category(), "Category");
-            Assert.assertEquals(edit.selectedOptionText("brand_id"), data.brand(), "Brand");
+            Assert.assertEquals(edit.selectedOptionText(FormField.CATEGORY).replaceFirst("^-+\\s*", ""), data.category(), "Category");
+            Assert.assertEquals(edit.selectedOptionText(FormField.BRAND), data.brand(), "Brand");
         });
     }
 
@@ -109,24 +108,20 @@ public class ProductCrossModuleTest extends ProductTestBase {
         loginAsAdmin();
         createBrandCategoryProduct(data);
 
-        ProductListPage list = new ProductListPage(driver());
-        String[] admin = Allure.step("Arrange: Mở trang sửa, ghi lại Name, Meta Title, Brand", () -> {
-            list.open();
-            list.search(data.product());
+        ProductListPage list = new ProductListPage();
+        String[] admin = arrange("Mở trang sửa, ghi lại Name, Meta Title, Brand", () -> {
+            list.searchFor(data.product());
             ProductEditPage edit = list.editRow(list.rowIndexOf(data.product()));
-            return new String[]{edit.nameValue(), edit.fieldValue("meta_title"), edit.selectedOptionText("brand_id")};
+            return new String[]{edit.nameValue(), edit.fieldValue(FormField.META_TITLE), edit.selectedOptionText(FormField.BRAND)};
         });
 
         String adminTab = browser().currentHandle();
-        StorefrontProductPage storefront = Allure.step("Act: Ở All products bấm View", () -> {
-            list.open();
-            list.search(data.product());
-            list.clickRowButtonAt(list.rowIndexOf(data.product()), 0);
-            list.switchToNewWindow(adminTab);
-            return new StorefrontProductPage(driver()).waitUntilLoaded();
+        StorefrontProductPage storefront = act("Ở All products bấm View", () -> {
+            list.searchFor(data.product());
+            return list.viewRow(list.rowIndexOf(data.product()), adminTab).waitUntilLoaded();
         });
 
-        Allure.step("Assert: Khối thông tin sản phẩm khớp với Admin", () -> {
+        verify("Khối thông tin sản phẩm khớp với Admin", () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertTrue(storefront.currentPath().startsWith("/product/"), "Đường dẫn: " + storefront.currentUrl());
             soft.assertEquals(storefront.browserTitle(), admin[1], "Tiêu đề tab = Meta Title");
@@ -141,12 +136,12 @@ public class ProductCrossModuleTest extends ProductTestBase {
             soft.assertAll();
         });
 
-        Allure.step("Assert: Trang brand ngoài cửa hàng liệt kê sản phẩm", () -> {
+        verify("Trang brand ngoài cửa hàng liệt kê sản phẩm", () -> {
             StorefrontListingPage brandPage = storefront.clickBrand();
             Assert.assertTrue(brandPage.listsProduct(data.product()), "Trang brand phải có " + data.product());
         });
-        Allure.step("Assert: Trang danh mục ngoài cửa hàng liệt kê sản phẩm", () -> {
-            StorefrontListingPage categoryPage = new StorefrontListingPage(driver()).openAllCategories().clickCategory(data.category());
+        verify("Trang danh mục ngoài cửa hàng liệt kê sản phẩm", () -> {
+            StorefrontListingPage categoryPage = new StorefrontListingPage().openAllCategories().clickCategory(data.category());
             Assert.assertTrue(categoryPage.listsProduct(data.product()), "Trang danh mục phải có " + data.product());
         });
 

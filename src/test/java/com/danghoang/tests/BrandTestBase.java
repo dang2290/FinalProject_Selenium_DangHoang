@@ -1,15 +1,9 @@
 package com.danghoang.tests;
 
-import com.danghoang.base.BaseTest;
 import com.danghoang.pages.BrandEditPage;
 import com.danghoang.pages.BrandPage;
-import com.danghoang.utils.TestDataGenerator;
-import io.qameta.allure.Allure;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -17,32 +11,23 @@ import java.util.List;
  * PC-1 đăng nhập + mở All Brands · PC-2 tạo brand test · PC-3 dọn mọi brand do test tạo.
  * Môi trường dùng chung: mọi brand test mang mã truy vết riêng, chỉ brand chứa mã đó bị xoá.
  */
-abstract class BrandTestBase extends BaseTest {
+abstract class BrandTestBase extends TrackedDataTestBase {
 
     protected static final String INSERTED = "Brand has been inserted successfully";
     protected static final String UPDATED = "Brand has been updated successfully";
     protected static final String DELETED = "Brand has been deleted successfully";
 
-    private static final Logger LOG = LogManager.getLogger(BrandTestBase.class);
     private static final int MAX_CLEANUP_ROUNDS = 10;
-    private final ThreadLocal<List<String>> tokens = ThreadLocal.withInitial(ArrayList::new);
-
-    /** Mã truy vết cho dữ liệu của test — brand chứa mã này sẽ bị xoá khi test kết thúc. */
-    protected String newToken(String testName) {
-        String token = TestDataGenerator.token(testName);
-        tokens.get().add(token);
-        return token;
-    }
 
     /** PC-1: đăng nhập admin rồi mở All Brands. */
     protected BrandPage openBrandsAsAdmin() {
         loginAsAdmin();
-        return Allure.step("Arrange: Mở trang All Brands", () -> new BrandPage(driver()).open());
+        return arrange("Mở trang All Brands", () -> new BrandPage().open());
     }
 
     /** PC-2: tạo brand chỉ có Name bằng form Add New Brand. */
     protected void createBrand(BrandPage brandPage, String name) {
-        Allure.step("Arrange: Tạo brand test " + name, () -> {
+        arrange("Tạo brand test " + name, () -> {
             brandPage.open();
             brandPage.createBrand(name);
             Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Tạo brand test phải thành công");
@@ -51,9 +36,8 @@ abstract class BrandTestBase extends BaseTest {
 
     /** Tìm brand test rồi mở form sửa của nó. */
     protected BrandEditPage openEditOf(BrandPage brandPage, String name) {
-        return Allure.step("Arrange: Mở form sửa của " + name, () -> {
-            brandPage.open();
-            brandPage.search(name);
+        return arrange("Mở form sửa của " + name, () -> {
+            brandPage.searchFor(name);
             Assert.assertEquals(brandPage.rowCount(), 1, "Phải tìm thấy đúng 1 brand test");
             return brandPage.editFirstResult();
         });
@@ -61,24 +45,17 @@ abstract class BrandTestBase extends BaseTest {
 
     @Override
     protected void cleanUpTestData() {
-        List<String> created = new ArrayList<>(tokens.get());
-        tokens.remove();
-        for (String token : created) {
-            try {
-                Allure.step("Dọn dữ liệu: xoá brand chứa " + token, () -> deleteBrandsContaining(token));
-            } catch (RuntimeException e) {
-                LOG.warn("Không dọn được brand chứa {} — cần xoá tay", token, e);
-            }
+        for (String token : takeTokens()) {
+            runCleanup("xoá brand chứa " + token, () -> deleteBrandsContaining(token));
         }
     }
 
     private void deleteBrandsContaining(String token) {
         dismissAlertIfOpen();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
         for (int round = 0; round < MAX_CLEANUP_ROUNDS; round++) {
-            brandPage.open();
-            brandPage.search(token);
-            List<String> names = brandPage.getResultNames();
+            brandPage.searchFor(token);
+            List<String> names = brandPage.names();
             if (names.isEmpty()) {
                 return;
             }
@@ -87,9 +64,5 @@ abstract class BrandTestBase extends BaseTest {
             }
             brandPage.deleteFirstResult();
         }
-    }
-
-    private void dismissAlertIfOpen() {
-        browser().dismissAlertIfOpen();
     }
 }

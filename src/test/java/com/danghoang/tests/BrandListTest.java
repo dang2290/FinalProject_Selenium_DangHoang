@@ -1,8 +1,10 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
 import com.danghoang.pages.BrandEditPage;
 import com.danghoang.pages.BrandPage;
 import com.danghoang.pages.DashboardPage;
+import com.danghoang.pages.FormField;
 import com.danghoang.pages.LoginPage;
 import com.danghoang.pages.ProductCreatePage;
 import io.qameta.allure.Allure;
@@ -34,12 +36,11 @@ public class BrandListTest extends BrandTestBase {
     @Description("Kiểm tra vào All Brands từ sidebar Products → Brand thì đủ tiêu đề, cột bảng, ô tìm kiếm, thẻ Add New Brand với nhãn, chữ gợi ý, trạng thái rỗng mặc định, và mỗi dòng có nút sửa/xoá.")
     public void testAllBrandsPageElements() {
         tc("AEC_BRAND_TC_001", "smoke", "brand", "auth", "ui");
-        loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Ở sidebar bấm Products → Brand", brandPage::openFromSidebar);
+        BrandPage brandPage = act("Ở sidebar bấm Products → Brand", dashboard::goToBrands);
 
-        Allure.step("Assert: Bảng kiểm thành phần màn All Brands", () -> {
+        verify("Bảng kiểm thành phần màn All Brands", () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertTrue(brandPage.isTitleDisplayed(), "(1) Tiêu đề trang All Brands");
             soft.assertEquals(brandPage.cardHeaders(), List.of("Brands", "Add New Brand"), "(1)(4) Tiêu đề hai thẻ");
@@ -74,21 +75,21 @@ public class BrandListTest extends BrandTestBase {
         tc("AEC_BRAND_TC_003", "smoke", "brand", "auth");
         Allure.parameter("Biến thể", variant + " — " + entry);
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        Allure.step("Act: Vào trang theo lối " + entry, () -> {
+        act("Vào trang theo lối " + entry, () -> {
             switch (entry) {
                 case "sidebar" -> brandPage.openFromSidebar();
                 case "url" -> brandPage.open();
                 default -> {
                     String editUrl = brandPage.open().editUrlOfFirstRow();
-                    new BrandEditPage(driver()).openUrl(editUrl);
+                    new BrandEditPage().openUrl(editUrl);
                     brandPage.openFromSidebar();
                 }
             }
         });
 
-        Allure.step("Assert: Màn All Brands, mục Brand tô sáng, đúng URL", () -> {
+        verify("Màn All Brands, mục Brand tô sáng, đúng URL", () -> {
             Assert.assertTrue(brandPage.isTitleDisplayed(), "Tiêu đề All Brands");
             Assert.assertEquals(brandPage.cardHeaders(), List.of("Brands", "Add New Brand"), "Bảng danh sách và thẻ Add New Brand");
             Assert.assertTrue(brandPage.isBrandMenuActive(), "Mục Brand ở sidebar phải được tô sáng");
@@ -105,9 +106,9 @@ public class BrandListTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
 
-        Allure.step("Act: Tìm brand test", () -> brandPage.search(name));
+        act("Tìm brand test", () -> brandPage.search(name));
 
-        Allure.step("Assert: Cột Logo là ảnh giữ chỗ tải được", () -> {
+        verify("Cột Logo là ảnh giữ chỗ tải được", () -> {
             Assert.assertTrue(brandPage.logoSrcOfFirstRow().endsWith("placeholder.jpg"), "Đường dẫn ảnh: " + brandPage.logoSrcOfFirstRow());
             Assert.assertEquals(brandPage.logoAltOfFirstRow(), "Brand", "Văn bản thay thế của ảnh");
             Assert.assertTrue(brandPage.isLogoOfFirstRowLoaded(), "Ảnh giữ chỗ phải tải được, không phải ảnh lỗi");
@@ -126,11 +127,11 @@ public class BrandListTest extends BrandTestBase {
         tc("AEC_BRAND_TC_010", "regression", "brand", "auth");
         Allure.parameter("Biến thể", variant + " — trang " + page);
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        Allure.step("Act: Mở trang " + page, () -> brandPage.openPage(page));
+        act("Mở trang " + page, () -> brandPage.openPage(page));
 
-        Allure.step("Assert: Đúng 15 dòng", () -> Assert.assertEquals(brandPage.rowCount(), PAGE_SIZE, "Số dòng trên trang " + page));
+        verify("Đúng 15 dòng", () -> Assert.assertEquals(brandPage.rowCount(), PAGE_SIZE, "Số dòng trên trang " + page));
     }
 
     @DataProvider(name = "numberedPages", parallel = true)
@@ -145,11 +146,11 @@ public class BrandListTest extends BrandTestBase {
         tc("AEC_BRAND_TC_011", "regression", "brand", "auth");
         Allure.parameter("Biến thể", variant + " — trang " + page);
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        Allure.step("Act: Mở trang " + page, () -> brandPage.openPage(page));
+        act("Mở trang " + page, () -> brandPage.openPage(page));
 
-        Allure.step("Assert: Cột # từ " + ((page - 1) * PAGE_SIZE + 1) + " tới " + page * PAGE_SIZE, () -> {
+        verify("Cột # từ " + ((page - 1) * PAGE_SIZE + 1) + " tới " + page * PAGE_SIZE, () -> {
             List<Integer> expected = IntStream.rangeClosed((page - 1) * PAGE_SIZE + 1, page * PAGE_SIZE).boxed().toList();
             Assert.assertEquals(brandPage.rowNumbers(), expected, "Cột # trên trang " + page);
         });
@@ -166,16 +167,16 @@ public class BrandListTest extends BrandTestBase {
         String nameC = "ZzSort_" + token + "_c";
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Tạo lần lượt 3 brand theo thứ tự c → a → b", () -> {
+        act("Tạo lần lượt 3 brand theo thứ tự c → a → b", () -> {
             for (String name : List.of(nameC, nameA, nameB)) {
                 brandPage.createBrand(name);
             }
         });
 
-        Allure.step("Act: Tìm theo mã test", () -> brandPage.search(token));
+        act("Tìm theo mã test", () -> brandPage.search(token));
 
-        Allure.step("Assert: Thứ tự a → b → c", () ->
-                Assert.assertEquals(brandPage.getResultNames(), List.of(nameA, nameB, nameC), "Thứ tự trong danh sách"));
+        verify("Thứ tự a → b → c", () ->
+                Assert.assertEquals(brandPage.names(), List.of(nameA, nameB, nameC), "Thứ tự trong danh sách"));
     }
 
     @DataProvider(name = "pageNavigations", parallel = true)
@@ -195,9 +196,9 @@ public class BrandListTest extends BrandTestBase {
         tc("AEC_BRAND_TC_013", "regression", "brand", "auth");
         Allure.parameter("Biến thể", variant + " — trang " + startPage + " bấm " + button);
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        Allure.step("Arrange: Đứng ở trang " + startPage, () -> {
+        arrange("Đứng ở trang " + startPage, () -> {
             if (startPage == 1) {
                 brandPage.open();
             } else {
@@ -205,9 +206,9 @@ public class BrandListTest extends BrandTestBase {
             }
         });
 
-        Allure.step("Act: Bấm nút " + button, () -> brandPage.clickPage(button));
+        act("Bấm nút " + button, () -> brandPage.clickPage(button));
 
-        Allure.step("Assert: Sang trang " + targetPage, () -> {
+        verify("Sang trang " + targetPage, () -> {
             Assert.assertEquals(brandPage.activePage(), targetPage, "Số trang được tô");
             int target = Integer.parseInt(targetPage);
             List<Integer> numbers = brandPage.rowNumbers();
@@ -224,15 +225,15 @@ public class BrandListTest extends BrandTestBase {
     public void testLastPageHasRows() {
         tc("AEC_BRAND_TC_014", "regression", "brand", "auth", "knownIssue");
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        int lastPage = Allure.step("Act: Mở danh sách, bấm số trang lớn nhất", () -> {
+        int lastPage = act("Mở danh sách, bấm số trang lớn nhất", () -> {
             int page = brandPage.open().lastPageNumber();
             brandPage.clickPage(String.valueOf(page));
             return page;
         });
 
-        Allure.step("Assert: Trang " + lastPage + " có từ 1 đến 15 dòng", () -> {
+        verify("Trang " + lastPage + " có từ 1 đến 15 dòng", () -> {
             int rows = brandPage.rowCount();
             Assert.assertTrue(rows >= 1 && rows <= PAGE_SIZE, "Trang cuối có " + rows + " dòng");
         });
@@ -244,9 +245,9 @@ public class BrandListTest extends BrandTestBase {
     public void testListCountMatchesProductDropdown() {
         tc("AEC_BRAND_TC_015", "regression", "brand", "auth", "knownIssue");
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        int lastNumber = Allure.step("Act: Lấy số # ở dòng cuối cùng có dữ liệu của danh sách", () -> {
+        int lastNumber = act("Lấy số # ở dòng cuối cùng có dữ liệu của danh sách", () -> {
             for (int page = brandPage.open().lastPageNumber(); page >= 1; page--) {
                 List<Integer> numbers = brandPage.openPage(page).rowNumbers();
                 if (!numbers.isEmpty()) {
@@ -256,10 +257,10 @@ public class BrandListTest extends BrandTestBase {
             return 0;
         });
 
-        int dropdownCount = Allure.step("Act: Đếm brand trong dropdown Brand của Add New Product", () ->
-                new ProductCreatePage(driver()).open().brandOptions().size());
+        int dropdownCount = act("Đếm brand trong dropdown Brand của Add New Product", () ->
+                new ProductCreatePage().open().brandOptions().size());
 
-        Allure.step("Assert: Hai số bằng nhau", () ->
+        verify("Hai số bằng nhau", () ->
                 Assert.assertEquals(lastNumber, dropdownCount, "Số brand ở danh sách quản trị so với dropdown Brand"));
     }
 
@@ -272,12 +273,12 @@ public class BrandListTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
 
-        Allure.step("Act: Gõ tên brand test vào ô tìm kiếm, nhấn Enter", () -> brandPage.search(name));
+        act("Gõ tên brand test vào ô tìm kiếm, nhấn Enter", () -> brandPage.search(name));
 
-        Allure.step("Assert: URL có ?search=, giữ từ khoá, 1 dòng, không phân trang", () -> {
+        verify("URL có ?search=, giữ từ khoá, 1 dòng, không phân trang", () -> {
             Assert.assertTrue(brandPage.currentUrl().contains("search=" + name), "Thanh địa chỉ: " + brandPage.currentUrl());
             Assert.assertEquals(brandPage.searchValue(), name, "Ô tìm kiếm phải giữ từ khoá");
-            Assert.assertEquals(brandPage.getResultNames(), List.of(name), "Kết quả tìm kiếm");
+            Assert.assertEquals(brandPage.names(), List.of(name), "Kết quả tìm kiếm");
             Assert.assertFalse(brandPage.hasPagination(), "(REQ-12) Không được có thanh phân trang");
         });
     }
@@ -305,10 +306,10 @@ public class BrandListTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
 
-        Allure.step("Act: Tìm theo " + keyword, () -> brandPage.search(keyword));
+        act("Tìm theo " + keyword, () -> brandPage.search(keyword));
 
-        Allure.step("Assert: Có brand test, mọi dòng chứa từ khoá", () -> {
-            List<String> names = brandPage.getResultNames();
+        verify("Có brand test, mọi dòng chứa từ khoá", () -> {
+            List<String> names = brandPage.names();
             Assert.assertTrue(names.contains(name), "Kết quả phải có brand test: " + names);
             Assert.assertTrue(names.stream().allMatch(n -> n.toLowerCase().contains(keyword.toLowerCase())),
                     "Mọi dòng phải chứa từ khoá: " + names);
@@ -335,10 +336,10 @@ public class BrandListTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
 
-        Allure.step("Act: Tìm theo " + keyword, () -> brandPage.search(keyword));
+        act("Tìm theo " + keyword, () -> brandPage.search(keyword));
 
-        Allure.step("Assert: Có brand test trong kết quả", () ->
-                Assert.assertTrue(brandPage.getResultNames().contains(name), "Kết quả: " + brandPage.getResultNames()));
+        verify("Có brand test trong kết quả", () ->
+                Assert.assertTrue(brandPage.names().contains(name), "Kết quả: " + brandPage.names()));
     }
 
     private static String mixCase(String text) {
@@ -358,9 +359,9 @@ public class BrandListTest extends BrandTestBase {
         String keyword = "zzqxnotexist987";
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Tìm " + keyword, () -> brandPage.search(keyword));
+        act("Tìm " + keyword, () -> brandPage.search(keyword));
 
-        Allure.step("Assert: Bảng rỗng có dòng Nothing found, không phân trang, giữ từ khoá", () -> {
+        verify("Bảng rỗng có dòng Nothing found, không phân trang, giữ từ khoá", () -> {
             Assert.assertEquals(brandPage.rowCount(), 0, "Không được có dòng dữ liệu");
             Assert.assertTrue(brandPage.isNothingFoundShown(), "Phải có dòng Nothing found");
             Assert.assertFalse(brandPage.hasPagination(), "Không được có thanh phân trang");
@@ -390,9 +391,9 @@ public class BrandListTest extends BrandTestBase {
         Allure.parameter("Biến thể", variant + " — " + keyword);
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Tìm " + keyword, () -> brandPage.search(keyword));
+        act("Tìm " + keyword, () -> brandPage.search(keyword));
 
-        Allure.step("Assert: Trang hiển thị bình thường, giữ chuỗi đã gõ", () -> {
+        verify("Trang hiển thị bình thường, giữ chuỗi đã gõ", () -> {
             Assert.assertFalse(brandPage.isAlertOpen(), "Không được bật hộp thoại");
             Assert.assertFalse(brandPage.isServerErrorPage(), "Không được ra trang lỗi");
             Assert.assertTrue(brandPage.isTitleDisplayed(), "Phải vẫn là trang All Brands");
@@ -412,11 +413,11 @@ public class BrandListTest extends BrandTestBase {
     public void testBrandPagesRequireLogin(String variant, String path) {
         tc("AEC_BRAND_TC_046", "regression", "brand", "security", "smoke");
         Allure.parameter("Biến thể", variant + " — " + path);
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
+        act("Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
-        Allure.step("Assert: Về trang đăng nhập", () -> {
+        verify(StepNames.BACK_AT_LOGIN, () -> {
             loginPage.waitForPath("/login");
             Assert.assertEquals(loginPage.currentPath(), "/login", "Phải chuyển về /login");
             Assert.assertTrue(loginPage.isHeadingDisplayed(), "Phải thấy form đăng nhập");
@@ -431,15 +432,14 @@ public class BrandListTest extends BrandTestBase {
         tc("AEC_BRAND_TC_046", "regression", "brand", "auth", "security", "smoke");
         Allure.parameter("Biến thể", "c — đăng xuất → Back → tải lại");
         openBrandsAsAdmin();
-        LoginPage loginPage = new LoginPage(driver());
 
-        Allure.step("Act: Đăng xuất", () -> new DashboardPage(driver()).logout());
-        Allure.step("Act: Bấm Back rồi tải lại trang", () -> {
+        LoginPage loginPage = act("Đăng xuất", () -> new DashboardPage().logout());
+        act("Bấm Back rồi tải lại trang", () -> {
             browser().back();
             browser().refresh();
         });
 
-        Allure.step("Assert: Về trang đăng nhập", () -> {
+        verify(StepNames.BACK_AT_LOGIN, () -> {
             loginPage.waitForPath("/login");
             Assert.assertEquals(loginPage.currentPath(), "/login", "Phải chuyển về /login");
             Assert.assertTrue(loginPage.isHeadingDisplayed(), "Phải thấy form đăng nhập");
@@ -452,14 +452,14 @@ public class BrandListTest extends BrandTestBase {
     public void testCurrentRoleHasFullBrandPermission() {
         tc("AEC_BRAND_TC_047", "regression", "brand", "auth", "security");
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        Allure.step("Assert: (1) Sidebar Products có mục Brand", () ->
+        verify("(1) Sidebar Products có mục Brand", () ->
                 Assert.assertTrue(brandPage.isBrandInProductsMenu(), "Sidebar Products phải có mục Brand"));
 
-        Allure.step("Act: Bấm Brand", brandPage::openFromSidebar);
+        act("Bấm Brand", brandPage::openFromSidebar);
 
-        Allure.step("Assert: (2)(3)(4) Có thẻ Add New Brand, nút sửa và xoá mỗi dòng", () -> {
+        verify("(2)(3)(4) Có thẻ Add New Brand, nút sửa và xoá mỗi dòng", () -> {
             Assert.assertTrue(brandPage.cardHeaders().contains("Add New Brand"), "Phải có thẻ Add New Brand");
             Assert.assertTrue(brandPage.isSaveButtonEnabled(), "Nút Save phải bấm được");
             Assert.assertTrue(brandPage.rowCount() > 0, "Danh sách phải có dòng");
@@ -480,17 +480,17 @@ public class BrandListTest extends BrandTestBase {
         tc("AEC_BRAND_TC_049", "regression", "brand", "auth", "responsive");
         Allure.parameter("Biến thể", variant + " — " + width + "×" + height);
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
 
-        Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All Brands", () -> {
+        act("Đặt cửa sổ " + width + "×" + height + " rồi mở All Brands", () -> {
             browser().resize(width, height);
             brandPage.open();
         });
 
-        Allure.step("Assert: Bố cục dùng được, không cuộn ngang", () -> {
+        verify("Bố cục dùng được, không cuộn ngang", () -> {
             Assert.assertTrue(brandPage.hasNoHorizontalScroll(), "Không được có thanh cuộn ngang toàn trang");
             Assert.assertEquals(brandPage.tableHeaders(), List.of("#", "Name", "Logo", "Options"), "Bảng phải đủ 4 cột");
-            Assert.assertTrue(brandPage.getResultNames().stream().noneMatch(String::isBlank), "Tên brand phải đọc được");
+            Assert.assertTrue(brandPage.names().stream().noneMatch(String::isBlank), "Tên brand phải đọc được");
             Assert.assertTrue(brandPage.everyRowHasEditAndDelete(), "Nút sửa/xoá phải hiện");
             Assert.assertEquals(brandPage.formLabels(), List.of("Name", "Logo (120x80)", "Meta Title", "Meta description"),
                     "Thẻ Add New Brand đủ 4 ô");
@@ -506,24 +506,24 @@ public class BrandListTest extends BrandTestBase {
         String name = "AutoKey_" + newToken("TC050");
         BrandPage brandPage = openBrandsAsAdmin();
 
-        Allure.step("Act: Gõ AutoBrand vào ô tìm kiếm, nhấn Enter", () -> brandPage.search("AutoBrand"));
-        Allure.step("Assert: Danh sách được lọc", () ->
-                Assert.assertTrue(brandPage.getResultNames().stream().allMatch(n -> n.toLowerCase().contains("autobrand")),
+        act("Gõ AutoBrand vào ô tìm kiếm, nhấn Enter", () -> brandPage.search("AutoBrand"));
+        verify("Danh sách được lọc", () ->
+                Assert.assertTrue(brandPage.names().stream().allMatch(n -> n.toLowerCase().contains("autobrand")),
                         "Mọi dòng phải chứa AutoBrand"));
 
-        List<String> sequence = Allure.step("Act: Bấm vào ô Name, nhấn Tab 3 lần", () -> brandPage.tabSequenceFromName(3));
-        Allure.step("Assert: Focus đi Meta Title → Meta description → Save", () ->
-                Assert.assertEquals(sequence, List.of("meta_title", "meta_description", "Save"), "Thứ tự focus"));
+        List<String> sequence = act("Bấm vào ô Name, nhấn Tab 3 lần", () -> brandPage.tabSequenceFromName(3));
+        verify("Focus đi Meta Title → Meta description → Save", () ->
+                Assert.assertEquals(sequence, List.of(FormField.META_TITLE.toString(), FormField.META_DESCRIPTION.toString(), "Save"), "Thứ tự focus"));
 
-        Allure.step("Assert: Ô nhập đang focus có viền nhìn thấy được", () ->
+        verify("Ô nhập đang focus có viền nhìn thấy được", () ->
                 Assert.assertEquals(brandPage.fieldsWithoutVisibleFocus(), List.of(), "Các ô không đổi gì khi được focus"));
 
-        Allure.step("Act: Nhập Name, focus Save rồi nhấn Enter", () -> {
+        act("Nhập Name, focus Save rồi nhấn Enter", () -> {
             brandPage.enterNewBrandName(name);
             brandPage.pressEnterOnSave();
         });
 
-        Allure.step("Assert: Brand được tạo", () ->
+        verify("Brand được tạo", () ->
                 Assert.assertEquals(brandPage.getNotifyMessage(), INSERTED, "Thông báo sau khi nhấn Enter ở Save"));
     }
 }

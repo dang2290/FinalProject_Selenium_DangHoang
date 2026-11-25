@@ -1,8 +1,9 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import java.util.List;
@@ -13,15 +14,17 @@ import java.util.List;
  */
 public class StorefrontListingPage extends StorefrontPage {
 
+    /** JS: link danh mục đang hiện có chữ đúng bằng arguments[0] (null nếu không có). */
+    private static final String JS_VISIBLE_CATEGORY_LINK = "return [...document.querySelectorAll(\"a[href*='/category/']\")]"
+            + ".find(a => a.offsetParent && a.textContent.trim() === arguments[0]) || null;";
+    /** JS: chữ mọi link sản phẩm trên trang, gộp khoảng trắng, bỏ trùng và rỗng. */
+    private static final String JS_PRODUCT_LINK_TEXTS = "return [...new Set([...document.querySelectorAll(\"a[href*='/product/']\")]"
+            + ".map(a => a.textContent.replace(/\\s+/g,' ').trim()).filter(t => t))];";
     private static final By PAGE_BODY = By.cssSelector("section, .container");
     private static final By ALL_CATEGORIES_TITLE = By.xpath("//h1[normalize-space()='All categories']");
 
-    public StorefrontListingPage(WebDriver driver) {
-        super(driver);
-    }
-
     public StorefrontListingPage waitUntilLoaded() {
-        waitForVisible(PAGE_BODY);
+        WebUI.waitForElementVisible(PAGE_BODY);
         closeAdPopupIfShown();
         return this;
     }
@@ -38,21 +41,19 @@ public class StorefrontListingPage extends StorefrontPage {
      */
     @Step("Bấm danh mục {name} ở All categories")
     public StorefrontListingPage clickCategory(String name) {
-        WebElement link = (WebElement) js("return [...document.querySelectorAll(\"a[href*='/category/']\")]"
-                + ".find(a => a.offsetParent && a.textContent.trim() === arguments[0]) || null;", name);
+        WebElement link = (WebElement) WebUI.executeJS(JS_VISIBLE_CATEGORY_LINK, name);
         if (link == null) {
             throw new IllegalStateException("All categories không có danh mục " + name);
         }
-        js("arguments[0].scrollIntoView({block:'center'});", link);
-        andWaitForNewPage(link::click);
+        WebUI.scrollToElementAtCenter(link);
+        andWaitForNewPage(() -> WebUI.clickElement(link, "danh mục " + name));
         return waitUntilLoaded();
     }
 
     /** Chữ của mọi link sản phẩm đang hiện trên trang (thẻ sản phẩm). */
     @SuppressWarnings("unchecked")
     public List<String> productNames() {
-        return (List<String>) js("return [...new Set([...document.querySelectorAll(\"a[href*='/product/']\")]"
-                + ".map(a => a.textContent.replace(/\\s+/g,' ').trim()).filter(t => t))];");
+        return (List<String>) WebUI.executeJS(JS_PRODUCT_LINK_TEXTS);
     }
 
     public boolean listsProduct(String name) {

@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.utils.EnvReferenceData;
 import com.danghoang.pages.CategoryFormPage;
 import com.danghoang.pages.CategoryFormPage.ImageField;
@@ -45,12 +47,12 @@ public class CategoryFormTest extends CategoryTestBase {
         tc("AEC_CAT_TC_002", "smoke", "category", "auth", "ui");
         CategoryListPage list = openCategoriesAsAdmin();
 
-        CategoryFormPage form = Allure.step("Act: Bấm Add New category", list::clickAddNew);
+        CategoryFormPage form = act("Bấm Add New category", list::clickAddNew);
 
-        Allure.step("Assert: Đường dẫn form tạo", () ->
+        verify("Đường dẫn form tạo", () ->
                 Assert.assertTrue(form.isOnCreatePage(), "Thanh địa chỉ: " + form.currentUrl()));
 
-        Allure.step("Assert: Bảng kiểm form tạo", () -> {
+        verify("Bảng kiểm form tạo", () -> {
             Assert.assertTrue(form.isTitleDisplayed(), "(REQ-17) Thẻ Category Information");
             Assert.assertEquals(form.labels(), List.of("Name", "Parent Category", "Ordering Number", "Type", "Banner (200x200)",
                     "Icon (32x32)", "Meta Title", "Meta description", "Filtering Attributes"), "(REQ-17) Nhãn từ trên xuống");
@@ -80,9 +82,9 @@ public class CategoryFormTest extends CategoryTestBase {
         CategoryListPage list = openCategoriesAsAdmin();
         createCategory(name);
 
-        CategoryFormPage form = Allure.step("Act: Tìm danh mục test, bấm nút bút chì", () -> openEditOf(list, name));
+        CategoryFormPage form = act("Tìm danh mục test, bấm nút bút chì", () -> openEditOf(list, name));
 
-        Allure.step("Assert: Bảng kiểm form sửa", () -> {
+        verify("Bảng kiểm form sửa", () -> {
             Assert.assertTrue(form.isTitleDisplayed(), "(REQ-29) Tiêu đề Category Information");
             Assert.assertEquals(form.languageTabs(), List.of("English", "Vietnamese"), "(REQ-29) Hai tab");
             Assert.assertEquals(form.activeTab(), "English", "(REQ-29) Tab đang chọn");
@@ -95,7 +97,7 @@ public class CategoryFormTest extends CategoryTestBase {
             Assert.assertEquals(form.translatableLabels(), List.of("Name"), "(REQ-30) Chỉ Name có biểu tượng ngôn ngữ");
         });
 
-        Allure.step("Assert: Rê chuột lên biểu tượng cạnh Name hiện Translatable", () ->
+        verify(StepNames.TRANSLATABLE_HINT, () ->
                 Assert.assertEquals(form.translatableTooltip(), "Translatable", "Chú thích biểu tượng ngôn ngữ"));
     }
 
@@ -106,16 +108,15 @@ public class CategoryFormTest extends CategoryTestBase {
         tc("AEC_CAT_TC_021", "regression", "category", "auth", "validation");
         Allure.parameter("Biến thể", "a — form tạo");
         loginAsAdmin();
-        CategoryFormPage form = new CategoryFormPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
 
-        Allure.step("Act: Mở form tạo, để trống Name, Ordering Number 5, bấm Save", () -> {
+        act("Mở form tạo, để trống Name, Ordering Number 5 rồi bấm Save", () -> {
             form.openCreate();
             form.enterOrderLevel("5");
-            form.markPage();
             form.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name", () -> {
+        verify(StepNames.NAME_BLOCKED, () -> {
             Assert.assertFalse(form.nameValidationMessage().isEmpty(), "Phải có bong bóng cảnh báo ở ô Name");
             Assert.assertTrue(form.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(form.isNameFocused(), "Con trỏ phải nằm trong ô Name");
@@ -133,27 +134,21 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(name);
         CategoryFormPage form = openEditOf(list, name);
 
-        Allure.step("Act: Xoá hết Name, bấm Save", () -> {
+        act(StepNames.CLEAR_NAME_AND_SAVE, () -> {
             form.clearName();
-            form.markPage();
             form.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name", () -> {
+        verify(StepNames.NAME_BLOCKED, () -> {
             Assert.assertFalse(form.nameValidationMessage().isEmpty(), "Phải có bong bóng cảnh báo ở ô Name");
             Assert.assertTrue(form.isSamePageInstance(), "Không được gửi form");
         });
 
-        Allure.step("Assert: Danh mục giữ Name cũ", () ->
-                Assert.assertTrue(findRow(list, name) >= 0, "Danh mục test phải giữ tên cũ"));
+        verify("Danh mục giữ Name cũ", () ->
+                Assert.assertTrue(list.findRow(name) >= 0, "Danh mục test phải giữ tên cũ"));
     }
 
-    @DataProvider(name = "validNameLengths", parallel = true)
-    public Object[][] validNameLengths() {
-        return new Object[][]{{"b", 49}, {"c", 50}};
-    }
-
-    @Test(dataProvider = "validNameLengths", groups = {"regression", "category", "auth", "validation", "boundary"},
+    @Test(dataProvider = "nameLengthsWithin50", dataProviderClass = DataProviderFactory.class, groups = {"regression", "category", "auth", "validation", "boundary"},
             description = "Name có độ dài hợp lệ được lưu nguyên vẹn")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra Name dài 49 và 50 ký tự lưu thành công, form sửa giữ đúng từng ký tự. Biến thể a (1 ký tự `Q`) không automate: tên 1 ký tự không truy vết được để dọn trên môi trường dùng chung.")
@@ -164,21 +159,16 @@ public class CategoryFormTest extends CategoryTestBase {
         String name = padTo("AutoCat" + length + "_" + token + "_", 'x', length);
         CategoryListPage list = openCategoriesAsAdmin();
 
-        Allure.step("Act: Tạo danh mục với Name " + length + " ký tự", () -> createCategory(name));
+        act("Tạo danh mục với Name " + length + " ký tự", () -> createCategory(name));
 
         CategoryFormPage form = openEditOf(list, name);
-        Allure.step("Assert: Ô Name đúng từng ký tự", () -> {
+        verify("Ô Name đúng từng ký tự", () -> {
             Assert.assertEquals(form.nameValue(), name, "Name sau khi lưu");
             Assert.assertEquals(form.nameValue().length(), length, "Độ dài Name");
         });
     }
 
-    @DataProvider(name = "tooLongNames", parallel = true)
-    public Object[][] tooLongNames() {
-        return new Object[][]{{"a", 51}, {"b", 255}};
-    }
-
-    @Test(dataProvider = "tooLongNames", groups = {"regression", "category", "auth", "validation", "boundary", "knownIssue"},
+    @Test(dataProvider = "nameLengthsOver50", dataProviderClass = DataProviderFactory.class, groups = {"regression", "category", "auth", "validation", "boundary", "knownIssue"},
             description = "Name dài hơn 50 ký tự phải bị chặn kèm thông báo, không được cắt im lặng")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra Name dài 51 và 255 ký tự thì báo lỗi, vẫn ở form tạo, không có danh mục mới. Đang lệch: hệ thống báo thành công và lưu 50 ký tự đầu (AMB-CAT-01).")
@@ -188,21 +178,19 @@ public class CategoryFormTest extends CategoryTestBase {
         String token = newToken("TC024" + variant);
         String name = padTo("AutoCat" + length + "_" + token + "_", 'x', length);
         loginAsAdmin();
-        CategoryFormPage form = new CategoryFormPage(driver());
-        CategoryListPage list = new CategoryListPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
+        CategoryListPage list = new CategoryListPage();
 
-        Allure.step("Act: Nhập Name " + length + " ký tự rồi Save", () -> {
+        act("Nhập Name " + length + " ký tự rồi Save", () -> {
             form.openCreate();
-            form.enterName(name);
-            form.saveAndWait();
+            form.saveWithName(name);
         });
 
-        Allure.step("Assert: Vẫn ở form tạo (không chuyển về danh sách như khi lưu thành công)", () ->
+        verify("Vẫn ở form tạo (không chuyển về danh sách như khi lưu thành công)", () ->
                 Assert.assertTrue(form.isOnCreatePage(), "Phải vẫn ở form tạo, thực tế chuyển tới: " + form.currentUrl()));
 
-        Allure.step("Assert: Không có danh mục mới", () -> {
-            list.open();
-            list.search(token);
+        verify("Không có danh mục mới", () -> {
+            list.searchFor(token);
             Assert.assertEquals(list.rowCount(), 0, "Danh mục quá dài không được lưu (kể cả bị cắt)");
         });
     }
@@ -229,15 +217,15 @@ public class CategoryFormTest extends CategoryTestBase {
         Allure.parameter("Biến thể", variant + " — [" + typed + "]");
         CategoryListPage list = openCategoriesAsAdmin();
 
-        Allure.step("Act: Tạo danh mục với Name " + typed, () -> createCategory(typed));
+        act("Tạo danh mục với Name " + typed, () -> createCategory(typed));
 
-        Allure.step("Assert: Danh sách hiện đúng Name", () -> {
+        verify("Danh sách hiện đúng Name", () -> {
             list.search(token);
             Assert.assertEquals(list.names(), List.of(expected), "Tên ở danh sách");
         });
 
-        CategoryFormPage form = Allure.step("Act: Mở form sửa", () -> list.editRow(0));
-        Allure.step("Assert: Slug không chứa dấu cách, &, /, (, )", () ->
+        CategoryFormPage form = act(StepNames.OPEN_EDIT_FORM, () -> list.editRow(0));
+        verify("Slug không chứa dấu cách, &, /, (, )", () ->
                 Assert.assertFalse(form.slugValue().matches(".*[ &/()].*"), "Slug: " + form.slugValue()));
     }
 
@@ -249,21 +237,19 @@ public class CategoryFormTest extends CategoryTestBase {
         String name = "AutoCatDup_" + newToken("TC026");
         CategoryListPage list = openCategoriesAsAdmin();
 
-        Allure.step("Act: Tạo 2 danh mục cùng Name", () -> {
+        act("Tạo 2 danh mục cùng Name", () -> {
             createCategory(name);
             createCategory(name);
         });
 
-        Allure.step("Assert: Đúng 2 dòng cùng Name", () -> {
-            list.open();
-            list.search(name);
+        verify("Đúng 2 dòng cùng Name", () -> {
+            list.searchFor(name);
             Assert.assertEquals(list.names(), List.of(name, name), "Hai dòng cùng tên");
         });
 
-        Allure.step("Assert: Hai Slug khác nhau", () -> {
+        verify("Hai Slug khác nhau", () -> {
             String firstSlug = list.editRow(0).slugValue();
-            list.open();
-            list.search(name);
+            list.searchFor(name);
             String secondSlug = list.editRow(1).slugValue();
             Assert.assertNotEquals(firstSlug, secondSlug, "Slug của hai danh mục trùng tên");
         });
@@ -281,47 +267,34 @@ public class CategoryFormTest extends CategoryTestBase {
         CategoryListPage list = openCategoriesAsAdmin();
         createCategory(parent);
         createChildCategory(child, parent);
-        CategoryFormPage form = new CategoryFormPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
 
-        Allure.step("Act: Mở form tạo, gõ tên danh mục cha vào ô tìm của Parent Category", form::openCreate);
-        Allure.step("Assert: (a) Chỉ còn mục khớp tên cha; chọn được", () -> {
+        act("Mở form tạo, gõ tên danh mục cha vào ô tìm của Parent Category", form::openCreate);
+        verify("(a) Chỉ còn mục khớp tên cha; chọn được", () -> {
             Assert.assertEquals(form.searchParent(parent), List.of(parent), "Mục khớp");
             form.chooseParent(parent);
             Assert.assertEquals(form.parentShown(), parent, "Ô Parent Category sau khi chọn");
         });
 
-        Allure.step("Assert: (b) Danh mục con hiện với tiền tố --", () -> {
+        verify("(b) Danh mục con hiện với tiền tố --", () -> {
             Assert.assertEquals(form.searchParent(child), List.of("-- " + child), "Mục con");
             form.closeParentList();
         });
 
-        Allure.step("Act: (c) Đổi lại No Parent, nhập Name, Save", () -> {
+        act("(c) Đổi lại No Parent, nhập Name, Save", () -> {
             form.chooseParent(NO_PARENT);
-            form.enterName(noParent);
-            form.saveAndWait();
+            form.saveWithName(noParent);
             Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Lưu phải thành công");
         });
 
-        Allure.step("Assert: (c) Level 0, Parent —", () -> {
-            int row = findRow(list, noParent);
+        verify("(c) Level 0, Parent —", () -> {
+            int row = list.findRow(noParent);
             Assert.assertEquals(list.parentOf(row), EMPTY_CELL, "Parent Category");
             Assert.assertEquals(list.levelOf(row), "0", "Level");
         });
     }
 
-    @DataProvider(name = "orderLevels", parallel = true)
-    public Object[][] orderLevels() {
-        return new Object[][]{
-                {"a", "", "0"},
-                {"b", "abc", "0"},
-                {"c", "-5", "-5"},
-                {"d", "2147483647", "2147483647"},
-                {"e", "2147483648", "2147483647"},
-                {"f", "1.5", null}
-        };
-    }
-
-    @Test(dataProvider = "orderLevels", groups = {"regression", "category", "auth", "validation", "boundary"},
+    @Test(dataProvider = "orderLevels", dataProviderClass = DataProviderFactory.class, groups = {"regression", "category", "auth", "validation", "boundary"},
             description = "Ordering Number xử lý giá trị trống, âm, biên trên, số lẻ và chữ")
     @Severity(SeverityLevel.NORMAL)
     @Description("Kiểm tra Ordering Number: trống → 0; gõ chữ không nhận → 0; -5 giữ nguyên; 2147483647 giữ; 2147483648 về 2147483647; 1.5 bị trình duyệt chặn, không tạo danh mục.")
@@ -331,10 +304,10 @@ public class CategoryFormTest extends CategoryTestBase {
         String token = newToken("TC028" + variant);
         String name = "AutoCatOL_" + token;
         loginAsAdmin();
-        CategoryFormPage form = new CategoryFormPage(driver());
-        CategoryListPage list = new CategoryListPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
+        CategoryListPage list = new CategoryListPage();
 
-        Allure.step("Act: Nhập Name, Ordering Number " + typed, () -> {
+        act("Nhập Name, Ordering Number " + typed, () -> {
             form.openCreate();
             form.enterName(name);
             if (!typed.isEmpty()) {
@@ -343,28 +316,27 @@ public class CategoryFormTest extends CategoryTestBase {
         });
 
         if (expectedLevel == null) {
-            Allure.step("Act: Bấm Save", () -> {
-                form.markPage();
+            act(StepNames.CLICK_SAVE, () -> {
                 form.clickSave();
             });
-            Allure.step("Assert: Trình duyệt chặn ở Ordering Number, không có danh mục mới", () -> {
+            verify("Trình duyệt chặn ở Ordering Number, không có danh mục mới", () -> {
                 Assert.assertFalse(form.orderLevelValidationMessage().isEmpty(), "Phải có bong bóng cảnh báo ở Ordering Number");
                 Assert.assertTrue(form.isSamePageInstance(), "Không được gửi form");
-                Assert.assertEquals(findRow(list, name), -1, "Không được có danh mục mới");
+                Assert.assertEquals(list.findRow(name), -1, "Không được có danh mục mới");
             });
             return;
         }
 
-        Allure.step("Assert: Ô Ordering Number trước khi lưu", () -> {
+        verify("Ô Ordering Number trước khi lưu", () -> {
             if ("abc".equals(typed)) {
                 Assert.assertEquals(form.orderLevelValue(), "", "Ô số không được nhận chữ");
             }
         });
-        Allure.step("Act: Bấm Save", form::saveAndWait);
+        act(StepNames.CLICK_SAVE, form::saveAndWait);
 
-        Allure.step("Assert: Order Level ở danh sách là " + expectedLevel, () -> {
+        verify("Order Level ở danh sách là " + expectedLevel, () -> {
             Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Lưu phải thành công");
-            int row = findRow(list, name);
+            int row = list.findRow(name);
             Assert.assertTrue(row >= 0, "Phải tìm thấy danh mục");
             Assert.assertEquals(list.orderLevelOf(row), expectedLevel, "Order Level");
         });
@@ -384,19 +356,18 @@ public class CategoryFormTest extends CategoryTestBase {
         Allure.parameter("Biến thể", variant + " — " + type);
         String name = prefix + newToken("TC029" + variant);
         CategoryListPage list = openCategoriesAsAdmin();
-        CategoryFormPage form = new CategoryFormPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
 
-        Allure.step("Assert: Ô Type có đúng Physical, Digital", () ->
+        verify("Ô Type có đúng Physical, Digital", () ->
                 Assert.assertEquals(form.openCreate().typeOptions(), List.of("Physical", "Digital"), "Lựa chọn Type"));
 
-        Allure.step("Act: Chọn Type " + type + ", nhập Name, Save", () -> {
+        act("Chọn Type " + type + ", nhập Name, Save", () -> {
             form.chooseType(type);
-            form.enterName(name);
-            form.saveAndWait();
+            form.saveWithName(name);
             Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Lưu phải thành công");
         });
 
-        Allure.step("Assert: Form sửa giữ Type " + type, () ->
+        verify("Form sửa giữ Type " + type, () ->
                 Assert.assertEquals(openEditOf(list, name).typeShown(), type, "Type sau khi lưu"));
     }
 
@@ -418,9 +389,9 @@ public class CategoryFormTest extends CategoryTestBase {
         Allure.parameter("Biến thể", variant + " — " + field + (removeBeforeSave ? " rồi bỏ chọn" : ""));
         String name = prefix + newToken("TC030" + variant);
         CategoryListPage list = openCategoriesAsAdmin();
-        CategoryFormPage form = new CategoryFormPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
 
-        MediaLibraryModal library = Allure.step("Act: Mở form tạo, nhập Name, bấm Browse ở ô " + field, () -> {
+        MediaLibraryModal library = act("Mở form tạo, nhập Name, bấm Browse ở ô " + field, () -> {
             form.openCreate();
             form.enterName(name);
             MediaLibraryModal modal = form.openLibrary(field);
@@ -428,17 +399,17 @@ public class CategoryFormTest extends CategoryTestBase {
             return modal;
         });
 
-        Allure.step("Act: Bấm ảnh đầu tiên", () -> library.selectFile(0));
-        Allure.step("Assert: Ảnh được đánh dấu chọn", () ->
+        act("Bấm ảnh đầu tiên", () -> library.selectFile(0));
+        verify("Ảnh được đánh dấu chọn", () ->
                 Assert.assertEquals(library.selectedIndexes(), List.of(0), "Ảnh được đánh dấu"));
 
-        Allure.step("Act: Bấm Add Files", library::addFiles);
-        Allure.step("Assert: Ô báo 1 File selected, có ảnh xem trước", () -> {
+        act("Bấm Add Files", library::addFiles);
+        verify("Ô báo 1 File selected, có ảnh xem trước", () -> {
             Assert.assertEquals(form.fileAmountText(field), "1 File selected", "Chữ ô " + field);
             Assert.assertEquals(form.previewCount(field), 1, "Ảnh xem trước");
         });
 
-        Allure.step("Act: " + (removeBeforeSave ? "Bấm × trên ảnh xem trước rồi Save" : "Bấm Save"), () -> {
+        act("" + (removeBeforeSave ? "Bấm × trên ảnh xem trước rồi Save" : "Bấm Save"), () -> {
             if (removeBeforeSave) {
                 form.removePreview(field);
             }
@@ -447,7 +418,7 @@ public class CategoryFormTest extends CategoryTestBase {
         });
 
         CategoryFormPage edit = openEditOf(list, name);
-        Allure.step("Assert: Form sửa — ô " + field, () -> {
+        verify("Form sửa — ô " + field, () -> {
             if (removeBeforeSave) {
                 Assert.assertEquals(edit.fileAmountText(field), "Choose File", "Ô phải trở về Choose File");
                 Assert.assertEquals(edit.previewCount(field), 0, "Không được còn ảnh xem trước");
@@ -476,7 +447,7 @@ public class CategoryFormTest extends CategoryTestBase {
         String name = "AutoCatMeta_" + newToken("TC031" + variant);
         CategoryListPage list = openCategoriesAsAdmin();
 
-        Allure.step("Act: Tạo danh mục với Meta theo biến thể", () -> createCategory(name, form -> {
+        act("Tạo danh mục với Meta theo biến thể", () -> createCategory(name, form -> {
             if (!metaTitle.isEmpty()) {
                 form.enterMetaTitle(metaTitle);
             }
@@ -486,7 +457,7 @@ public class CategoryFormTest extends CategoryTestBase {
         }));
 
         CategoryFormPage form = openEditOf(list, name);
-        Allure.step("Assert: Hai ô Meta đúng nội dung", () -> {
+        verify("Hai ô Meta đúng nội dung", () -> {
             Assert.assertEquals(form.metaTitleValue(), metaTitle, "Meta Title");
             Assert.assertEquals(form.metaDescriptionValue(), metaDescription, "Meta description");
         });
@@ -506,14 +477,14 @@ public class CategoryFormTest extends CategoryTestBase {
         Allure.parameter("Biến thể", variant + " — " + count + " thuộc tính" + (unselect ? " rồi bỏ chọn" : ""));
         String name = "AutoCatAttr_" + newToken("TC032" + variant);
         CategoryListPage list = openCategoriesAsAdmin();
-        CategoryFormPage form = new CategoryFormPage(driver());
+        CategoryFormPage form = new CategoryFormPage();
 
-        Allure.step("Assert: Danh sách thuộc tính mở ra, có ô tìm", () -> {
+        verify("Danh sách thuộc tính mở ra, có ô tìm", () -> {
             form.openCreate();
             Assert.assertTrue(form.isAttributesSearchShown(), "Danh sách thuộc tính phải có ô tìm");
         });
 
-        List<String> chosen = Allure.step("Act: Chọn " + count + " thuộc tính đầu" + (unselect ? " rồi bấm lại để bỏ" : ""), () -> {
+        List<String> chosen = act("Chọn " + count + " thuộc tính đầu" + (unselect ? " rồi bấm lại để bỏ" : ""), () -> {
             for (int i = 0; i < count; i++) {
                 form.toggleAttribute(i);
             }
@@ -524,18 +495,17 @@ public class CategoryFormTest extends CategoryTestBase {
             return form.selectedAttributes();
         });
 
-        Allure.step("Assert: Ô hiện đúng thuộc tính đã chọn", () ->
+        verify("Ô hiện đúng thuộc tính đã chọn", () ->
                 Assert.assertEquals(form.attributesShown(), chosen.isEmpty() ? "Nothing selected" : String.join(", ", chosen),
                         "Chữ trên ô Filtering Attributes"));
 
-        Allure.step("Act: Nhập Name, Save", () -> {
-            form.enterName(name);
-            form.saveAndWait();
+        act("Nhập Name, Save", () -> {
+            form.saveWithName(name);
             Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Lưu phải thành công");
         });
 
         CategoryFormPage edit = openEditOf(list, name);
-        Allure.step("Assert: Form sửa giữ đúng thuộc tính", () -> {
+        verify("Form sửa giữ đúng thuộc tính", () -> {
             Assert.assertEquals(edit.selectedAttributes(), chosen, "Thuộc tính sau khi lưu");
             if (unselect) {
                 Assert.assertEquals(edit.attributesShown(), "Nothing selected", "Chữ trên ô Filtering Attributes");
@@ -560,7 +530,7 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(name);
 
         CategoryFormPage form = openEditOf(list, name);
-        Allure.step("Assert: Slug đúng dạng", () -> {
+        verify("Slug đúng dạng", () -> {
             String slug = form.slugValue();
             Assert.assertTrue(slug.matches("^[A-Za-z0-9-]+$"), "Slug chỉ gồm chữ, số, dấu -: " + slug);
             if ("a".equals(variant)) {
@@ -587,12 +557,9 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(name);
         CategoryFormPage form = openEditOf(list, name);
 
-        Allure.step("Act: Thay ô Slug rồi Save", () -> {
-            form.enterSlug(slug);
-            form.saveAndWait();
-        });
+        act("Thay ô Slug rồi bấm Save", () -> form.saveWithSlug(slug));
 
-        Allure.step("Assert: Thông báo cập nhật, Slug đúng", () -> {
+        verify("Thông báo cập nhật, Slug đúng", () -> {
             Assert.assertEquals(form.getNotifyMessage(), UPDATED, "Thông báo sau khi sửa");
             if (customSlug) {
                 Assert.assertEquals(form.slugValue(), slug.toLowerCase(), "Slug phải được lưu chữ thường");
@@ -614,16 +581,13 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(nameA);
         createCategory(nameB);
 
-        String slugA = Allure.step("Arrange: Ghi lại Slug của A", () -> openEditOf(list, nameA).slugValue());
+        String slugA = arrange("Ghi lại Slug của A", () -> openEditOf(list, nameA).slugValue());
         CategoryFormPage formB = openEditOf(list, nameB);
         String oldSlugB = formB.slugValue();
 
-        Allure.step("Act: Nhập Slug của A vào B rồi Save", () -> {
-            formB.enterSlug(slugA);
-            formB.saveAndWait();
-        });
+        act("Nhập Slug của A vào B rồi bấm Save", () -> formB.saveWithSlug(slugA));
 
-        Allure.step("Assert: Không báo cập nhật thành công, Slug của B giữ giá trị cũ", () -> {
+        verify("Không báo cập nhật thành công, Slug của B giữ giá trị cũ", () -> {
             Assert.assertNotEquals(formB.getNotifyMessage(), UPDATED, "Không được chấp nhận Slug trùng");
             Assert.assertEquals(openEditOf(list, nameB).slugValue(), oldSlugB, "Slug của B");
         });
@@ -642,24 +606,23 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(name);
         CategoryFormPage form = openEditOf(list, name);
 
-        Allure.step("Act: Bấm tab Vietnamese", () -> form.clickTab("Vietnamese"));
-        Allure.step("Assert: ?lang=vn, ô Name có sẵn tên tiếng Anh", () -> {
+        act(StepNames.CLICK_VIETNAMESE_TAB, () -> form.clickTab("Vietnamese"));
+        verify("?lang=vn, ô Name có sẵn tên tiếng Anh", () -> {
             Assert.assertTrue(form.currentUrl().endsWith("lang=vn"), "Đường dẫn: " + form.currentUrl());
             Assert.assertEquals(form.nameValue(), name, "Ô Name ở tab Vietnamese");
         });
 
-        Allure.step("Act: Đổi Name tiếng Việt rồi Save", () -> {
-            form.enterName(vietnameseName);
-            form.saveAndWait();
+        act("Đổi Name tiếng Việt rồi bấm Save", () -> {
+            form.saveWithName(vietnameseName);
             Assert.assertEquals(form.getNotifyMessage(), UPDATED, "Lưu phải thành công");
         });
 
-        Allure.step("Assert: Tab English vẫn là tên tiếng Anh", () -> {
+        verify("Tab English vẫn là tên tiếng Anh", () -> {
             form.clickTab("English");
             Assert.assertEquals(form.nameValue(), name, "Name ở tab English");
         });
-        Allure.step("Assert: Danh sách vẫn hiện tên tiếng Anh", () ->
-                Assert.assertTrue(findRow(list, name) >= 0, "Danh sách phải hiện tên tiếng Anh"));
+        verify("Danh sách vẫn hiện tên tiếng Anh", () ->
+                Assert.assertTrue(list.findRow(name) >= 0, "Danh sách phải hiện tên tiếng Anh"));
     }
 
     @Test(groups = {"regression", "category", "auth", "localization"}, description = "Meta Title dùng chung hai ngôn ngữ")
@@ -674,14 +637,14 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(name);
         CategoryFormPage form = openEditOf(list, name);
 
-        Allure.step("Act: Tab Vietnamese — đổi Meta Title rồi Save", () -> {
+        act("Tab Vietnamese — đổi Meta Title rồi bấm Save", () -> {
             form.clickTab("Vietnamese");
             form.enterMetaTitle(metaTitle);
             form.saveAndWait();
             Assert.assertEquals(form.getNotifyMessage(), UPDATED, "Lưu phải thành công");
         });
 
-        Allure.step("Assert: Tab English hiện cùng Meta Title", () -> {
+        verify("Tab English hiện cùng Meta Title", () -> {
             form.clickTab("English");
             Assert.assertEquals(form.metaTitleValue(), metaTitle, "Meta Title ở tab English");
         });
@@ -704,19 +667,19 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(other);
         CategoryFormPage form = openEditOf(list, parent);
 
-        Allure.step("Assert: (a)(b)(c) Không có chính nó, con, cháu", () -> {
+        verify("(a)(b)(c) Không có chính nó, con, cháu", () -> {
             for (String excluded : List.of(parent, child, grandchild)) {
                 form.searchParent(excluded);
                 Assert.assertTrue(form.isParentNoResultsShown(), "Ô Parent Category không được có " + excluded);
             }
         });
 
-        Allure.step("Assert: (d) Có danh mục gốc khác", () ->
+        verify("(d) Có danh mục gốc khác", () ->
                 Assert.assertEquals(form.searchParent(other), List.of(other), "Ô Parent Category phải có " + other));
 
-        Allure.step("Act: Đóng danh sách, không Save", form::closeParentList);
-        Allure.step("Assert: Danh mục cha không đổi", () -> {
-            int row = findRow(list, parent);
+        act("Đóng danh sách, không Save", form::closeParentList);
+        verify("Danh mục cha không đổi", () -> {
+            int row = list.findRow(parent);
             Assert.assertEquals(list.parentOf(row), EMPTY_CELL, "Parent Category của danh mục cha");
             Assert.assertEquals(list.levelOf(row), "0", "Level của danh mục cha");
         });
@@ -734,26 +697,26 @@ public class CategoryFormTest extends CategoryTestBase {
         createCategory(nameA);
         createCategory(nameB);
 
-        Allure.step("Act: (a) Form sửa B — chọn cha A, Save", () -> {
+        act("(a) Form sửa B — chọn cha A, Save", () -> {
             CategoryFormPage form = openEditOf(list, nameB);
             form.chooseParent(nameA);
             form.saveAndWait();
             Assert.assertEquals(form.getNotifyMessage(), UPDATED, "Lưu phải thành công");
         });
-        Allure.step("Assert: (a) B có Parent A, Level 1", () -> {
-            int row = findRow(list, nameB);
+        verify("(a) B có Parent A, Level 1", () -> {
+            int row = list.findRow(nameB);
             Assert.assertEquals(list.parentOf(row), nameA, "Parent Category");
             Assert.assertEquals(list.levelOf(row), "1", "Level");
         });
 
-        Allure.step("Act: (b) Form sửa B — chọn No Parent, Save", () -> {
+        act("(b) Form sửa B — chọn No Parent, Save", () -> {
             CategoryFormPage form = openEditOf(list, nameB);
             form.chooseParent(NO_PARENT);
             form.saveAndWait();
             Assert.assertEquals(form.getNotifyMessage(), UPDATED, "Lưu phải thành công");
         });
-        Allure.step("Assert: (b) B có Parent —, Level 0", () -> {
-            int row = findRow(list, nameB);
+        verify("(b) B có Parent —, Level 0", () -> {
+            int row = list.findRow(nameB);
             Assert.assertEquals(list.parentOf(row), EMPTY_CELL, "Parent Category");
             Assert.assertEquals(list.levelOf(row), "0", "Level");
         });
@@ -770,12 +733,12 @@ public class CategoryFormTest extends CategoryTestBase {
         openCategoriesAsAdmin();
         createCategory(physical);
         createCategory(digital, form -> form.chooseType("Digital"));
-        ProductCreatePage productPage = new ProductCreatePage(driver());
+        ProductCreatePage productPage = new ProductCreatePage();
 
-        Allure.step("Assert: (a)(b) Add New Product có Physical, không có Digital", () ->
+        verify("(a)(b) Add New Product có Physical, không có Digital", () ->
                 Assert.assertEquals(productPage.open().categoryOptionsContaining(token), List.of(physical), "Ô Category sản phẩm vật lý"));
 
-        Allure.step("Assert: (c)(d) Add New Digital Product có Digital, không có Physical", () ->
+        verify("(c)(d) Add New Digital Product có Digital, không có Physical", () ->
                 Assert.assertEquals(productPage.openDigital().categoryOptionsContaining(token), List.of(digital), "Ô Category sản phẩm số"));
     }
 
@@ -799,13 +762,12 @@ public class CategoryFormTest extends CategoryTestBase {
         CategoryListPage list = openCategoriesAsAdmin();
         createCategory(name);
 
-        Allure.step("Assert: Tìm bằng toàn bộ Name ra đúng 1 dòng", () -> {
-            list.open();
-            list.search(name);
+        verify("Tìm bằng toàn bộ Name ra đúng 1 dòng", () -> {
+            list.searchFor(name);
             Assert.assertEquals(list.names(), List.of(name), "Tên ở danh sách");
         });
 
-        CategoryFormPage form = Allure.step("Act: Mở form sửa", () -> list.editRow(0));
-        Allure.step("Assert: Ô Name đúng nguyên văn", () -> Assert.assertEquals(form.nameValue(), name, "Ô Name"));
+        CategoryFormPage form = act(StepNames.OPEN_EDIT_FORM, () -> list.editRow(0));
+        verify("Ô Name đúng nguyên văn", () -> Assert.assertEquals(form.nameValue(), name, "Ô Name"));
     }
 }

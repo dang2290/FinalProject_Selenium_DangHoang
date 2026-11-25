@@ -1,6 +1,7 @@
 package com.danghoang.tests;
 
 import com.danghoang.base.BaseTest;
+import com.danghoang.base.StepNames;
 import com.danghoang.pages.BrandPage;
 import com.danghoang.pages.DashboardPage;
 import com.danghoang.pages.LoginPage;
@@ -33,7 +34,7 @@ public class SessionTest extends BaseTest {
 
         DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Assert: Vào Dashboard, mục Dashboard được chọn", () -> {
+        verify("Vào Dashboard, mục Dashboard được chọn", () -> {
             Assert.assertTrue(dashboard.currentPath().startsWith("/admin"), "Phải vào /admin");
             Assert.assertTrue(dashboard.isDashboardMenuActive(), "Mục Dashboard ở sidebar phải được chọn");
             Assert.assertEquals(dashboard.accountName(), "Admin Example", "Tên tài khoản góc trên phải");
@@ -47,12 +48,12 @@ public class SessionTest extends BaseTest {
         tc("AEC_LOGIN_TC_007", "smoke", "login", "auth");
         DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Đăng xuất bằng menu tài khoản", dashboard::logout);
+        LoginPage loginPage = act("Đăng xuất bằng menu tài khoản", dashboard::logout);
 
-        Allure.step("Assert: Về /login; mở lại /admin vẫn ở /login", () -> {
-            Assert.assertEquals(dashboard.currentPath(), "/login", "Sau đăng xuất phải về /login");
+        verify("Về /login; mở lại /admin vẫn ở /login", () -> {
+            Assert.assertEquals(loginPage.currentPath(), "/login", "Sau đăng xuất phải về /login");
             browser().openPath("/admin");
-            Assert.assertEquals(dashboard.currentPath(), "/login", "Mở /admin sau đăng xuất phải về /login");
+            Assert.assertEquals(loginPage.currentPath(), "/login", "Mở /admin sau đăng xuất phải về /login");
             Assert.assertFalse(dashboard.isSidebarDisplayedNow(), "Không được thấy Dashboard");
         });
     }
@@ -69,11 +70,11 @@ public class SessionTest extends BaseTest {
     public void testProtectedPagesRequireLogin(String variant, String path) {
         tc("AEC_LOGIN_TC_013", "regression", "login", "security");
         Allure.parameter("Biến thể", variant + " — " + path);
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
+        act("Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
-        Allure.step("Assert: Về trang đăng nhập", () -> {
+        verify(StepNames.BACK_AT_LOGIN, () -> {
             loginPage.waitForPath("/login");
             Assert.assertEquals(loginPage.currentPath(), "/login", "Phải chuyển về /login");
             Assert.assertTrue(loginPage.isHeadingDisplayed(), "Phải thấy form đăng nhập, không thấy nội dung quản trị");
@@ -99,9 +100,9 @@ public class SessionTest extends BaseTest {
         Allure.parameter("Trang", path);
         DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Mở " + path + " khi đang đăng nhập", () -> browser().openPath(path));
+        act("Mở " + path + " khi đang đăng nhập", () -> browser().openPath(path));
 
-        Allure.step("Assert: Chuyển tới " + expectedPath, () -> {
+        verify("Chuyển tới " + expectedPath, () -> {
             dashboard.waitForPath(expectedPath);
             Assert.assertEquals(dashboard.currentPath(), expectedPath, "Trang đích khi đang đăng nhập mở " + path);
         });
@@ -114,14 +115,14 @@ public class SessionTest extends BaseTest {
         tc("AEC_LOGIN_TC_018", "regression", "login", "auth");
         DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Assert: Tên và vai trò tài khoản", () -> {
+        verify("Tên và vai trò tài khoản", () -> {
             Assert.assertEquals(dashboard.accountName(), "Admin Example", "Tên tài khoản");
             Assert.assertEquals(dashboard.accountRole(), "staff", "Vai trò tài khoản");
         });
 
-        List<String> items = Allure.step("Act: Mở menu tài khoản", dashboard::openAccountMenu);
+        List<String> items = act("Mở menu tài khoản", dashboard::openAccountMenu);
 
-        Allure.step("Assert: Menu có Profile, Logout", () ->
+        verify("Menu có Profile, Logout", () ->
                 Assert.assertEquals(items, List.of("Profile", "Logout"), "Các mục trong menu tài khoản"));
     }
 
@@ -133,11 +134,11 @@ public class SessionTest extends BaseTest {
         tc("AEC_LOGIN_TC_019", "regression", "login", "auth", "security", "knownIssue");
         DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Đăng xuất bằng menu tài khoản", dashboard::logout);
+        act("Đăng xuất bằng menu tài khoản", dashboard::logout);
 
-        Allure.step("Act: Bấm Back của trình duyệt", () -> browser().back());
+        act("Bấm Back của trình duyệt", () -> browser().back());
 
-        Allure.step("Assert: Không hiện lại Dashboard", () ->
+        verify("Không hiện lại Dashboard", () ->
                 Assert.assertFalse(dashboard.isSidebarDisplayedNow(),
                         "Sau đăng xuất, Back không được hiện lại Dashboard — đang ở " + dashboard.currentUrl()));
     }
@@ -148,23 +149,19 @@ public class SessionTest extends BaseTest {
     public void testExpiredSessionDoesNotSave() {
         tc("AEC_LOGIN_TC_020", "regression", "login", "auth", "security");
         loginAsAdmin();
-        BrandPage brandPage = new BrandPage(driver());
+        BrandPage brandPage = new BrandPage();
         String formTab = browser().currentHandle();
 
-        Allure.step("Arrange: Tab 1 mở All Brands, nhập tên brand mới (chưa lưu)", () -> {
+        arrange("Tab 1 mở All Brands, nhập tên brand mới (chưa lưu)", () -> {
             brandPage.open();
             brandPage.enterNewBrandName(TestDataGenerator.name("AutoBrand", "LoginTC020"));
         });
 
-        Allure.step("Act: Tab 2 đăng xuất", () -> {
-            browser().openNewTab();
-            new DashboardPage(driver()).open().logout();
-            browser().closeTabAndSwitchTo(formTab);
-        });
+        act(StepNames.TAB2_LOGOUT, () -> new DashboardPage().logoutInNewTab(formTab));
 
-        Allure.step("Act: Tab 1 bấm Save", brandPage::clickSave);
+        act(StepNames.TAB1_SAVE, brandPage::clickSave);
 
-        Allure.step("Assert: 419 PAGE EXPIRED hoặc về /login, không lưu", () ->
+        verify("419 PAGE EXPIRED hoặc về /login, không lưu", () ->
                 Assert.assertTrue(brandPage.isPageExpired() || "/login".equals(brandPage.currentPath()),
                         "Gửi form sau khi hết phiên phải bị chặn"));
     }

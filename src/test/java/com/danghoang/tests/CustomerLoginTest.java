@@ -1,6 +1,8 @@
 package com.danghoang.tests;
 
 import com.danghoang.base.BaseTest;
+import com.danghoang.base.StepNames;
+import com.danghoang.pages.BasePage;
 import com.danghoang.pages.CustomerLoginPage;
 import com.danghoang.pages.ForgotPasswordPage;
 import com.danghoang.pages.RegistrationPage;
@@ -28,13 +30,13 @@ public class CustomerLoginTest extends BaseTest {
     @Description("Kiểm tra /users/login hiện tiêu đề, 2 ô, Remember Me, Forgot password?, nút Login, liên kết Register Now và 2 liên kết ở header.")
     public void testCustomerLoginPageElements() {
         tc("AEC_LOGIN_TC_003", "smoke", "login");
-        CustomerLoginPage page = new CustomerLoginPage(driver());
+        CustomerLoginPage page = new CustomerLoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập khách, đóng popup nếu có", () -> {
+        arrange("Mở trang đăng nhập khách, đóng popup nếu có", () -> {
             page.open();
         });
 
-        Allure.step("Assert: Đối chiếu bảng kiểm thành phần", () -> {
+        verify(StepNames.SCREEN_CHECKLIST, () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertTrue(page.isTitleDisplayed(), "1. Tiêu đề 'Login to your account.'");
             soft.assertTrue(page.isEmailDisplayed() && page.isPasswordDisplayed(), "2. Ô Email, Password");
@@ -52,15 +54,15 @@ public class CustomerLoginTest extends BaseTest {
     @Description("Kiểm tra bấm Login khi để trống thì 2 ô viền đỏ và báo email bắt buộc, không nhắc số điện thoại. Đang lệch: thông báo nhắc 'phone' (AMB-LOGIN-02).")
     public void testCustomerLoginEmptyFields() {
         tc("AEC_LOGIN_TC_021", "regression", "login", "validation", "knownIssue");
-        CustomerLoginPage page = new CustomerLoginPage(driver());
+        CustomerLoginPage page = new CustomerLoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập khách", () -> {
+        arrange(StepNames.OPEN_CUSTOMER_LOGIN, () -> {
             page.open();
         });
 
-        Allure.step("Act: Để trống 2 ô, bấm Login", page::submitEmpty);
+        act("Để trống 2 ô, bấm Login", page::submitEmpty);
 
-        Allure.step("Assert: 2 ô viền đỏ, lỗi email không nhắc số điện thoại", () -> {
+        verify("2 ô viền đỏ, lỗi email không nhắc số điện thoại", () -> {
             Assert.assertTrue(page.isStillOnPage(), "Phải ở lại /users/login");
             Assert.assertEquals(page.invalidFieldNames(), List.of("email", "password"), "Hai ô phải viền đỏ");
             String error = page.emailFieldError();
@@ -74,16 +76,16 @@ public class CustomerLoginTest extends BaseTest {
     @Description("Kiểm tra email chưa đăng ký ở form khách thì ở lại /users/login, thông báo 'Invalid login credentials', các ô trống.")
     public void testCustomerLoginInvalidCredentials() {
         tc("AEC_LOGIN_TC_022", "regression", "login");
-        CustomerLoginPage page = new CustomerLoginPage(driver());
+        CustomerLoginPage page = new CustomerLoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập khách", () -> {
+        arrange(StepNames.OPEN_CUSTOMER_LOGIN, () -> {
             page.open();
         });
 
-        Allure.step("Act: Đăng nhập bằng email chưa đăng ký", () ->
+        act("Đăng nhập bằng email chưa đăng ký", () ->
                 page.login(TestDataGenerator.email("login_TC022"), TestDataGenerator.password("TC022")));
 
-        Allure.step("Assert: Bị từ chối, các ô trống", () -> {
+        verify("Bị từ chối, các ô trống", () -> {
             Assert.assertEquals(page.getNotifyMessage(), "Invalid login credentials", "Thông báo sai thông tin");
             Assert.assertTrue(page.isStillOnPage(), "Phải ở lại /users/login");
             Assert.assertEquals(page.emailValue(), "", "Ô Email phải trống");
@@ -109,18 +111,16 @@ public class CustomerLoginTest extends BaseTest {
         tc("AEC_LOGIN_TC_024", "regression", "login");
         Allure.parameter("Biến thể", variant + " — " + route);
 
-        Allure.step("Act: Mở trang xuất phát và bấm liên kết " + route, () -> {
-            switch (variant) {
-                case "a" -> new CustomerLoginPage(driver()).open().clickRegisterNow();
-                case "b" -> new RegistrationPage(driver()).open().clickLogIn();
-                case "c" -> new CustomerLoginPage(driver()).open().clickForgotPassword();
-                default -> new ForgotPasswordPage(driver()).open().clickBackToLogin();
-            }
+        BasePage destination = act("Mở trang xuất phát và bấm liên kết " + route, () -> switch (variant) {
+            case "a" -> new CustomerLoginPage().open().clickRegisterNow();
+            case "b" -> new RegistrationPage().open().clickLogIn();
+            case "c" -> new CustomerLoginPage().open().clickForgotPassword();
+            default -> new ForgotPasswordPage().open().clickBackToLogin();
         });
 
-        Allure.step("Assert: Mở đúng " + expectedPath, () -> {
-            new CustomerLoginPage(driver()).waitForPath(expectedPath);
-            Assert.assertEquals(new CustomerLoginPage(driver()).currentPath(), expectedPath, "Trang đích của liên kết");
+        verify("Mở đúng " + expectedPath, () -> {
+            destination.waitForPath(expectedPath);
+            Assert.assertEquals(destination.currentPath(), expectedPath, "Trang đích của liên kết");
         });
     }
 
@@ -129,13 +129,13 @@ public class CustomerLoginTest extends BaseTest {
     @Description("Kiểm tra dòng phía trên Register Now ghi 'Don't have an account?'. Đang lệch: thiếu dấu nháy (AMB-LOGIN-13).")
     public void testCustomerLoginRegisterPromptSpelling() {
         tc("AEC_LOGIN_TC_040", "regression", "login", "knownIssue");
-        CustomerLoginPage page = new CustomerLoginPage(driver());
+        CustomerLoginPage page = new CustomerLoginPage();
 
-        Allure.step("Arrange: Mở trang đăng nhập khách", () -> {
+        arrange(StepNames.OPEN_CUSTOMER_LOGIN, () -> {
             page.open();
         });
 
-        Allure.step("Assert: Dòng mời đăng ký đúng chính tả", () ->
+        verify("Dòng mời đăng ký đúng chính tả", () ->
                 Assert.assertEquals(page.registerPrompt(), "Don't have an account?", "Câu phía trên Register Now"));
     }
 
@@ -146,16 +146,16 @@ public class CustomerLoginTest extends BaseTest {
     public void testCustomerLoginResponsive(String variant, int width, int height) {
         tc("AEC_LOGIN_TC_038", "regression", "login", "responsive");
         Allure.parameter("Biến thể", variant + " — " + width + "×" + height + " — trang khách");
-        CustomerLoginPage page = new CustomerLoginPage(driver());
+        CustomerLoginPage page = new CustomerLoginPage();
 
-        Allure.step("Arrange: Đặt cửa sổ " + width + "×" + height, () ->
+        arrange("Đặt cửa sổ " + width + "×" + height, () ->
                 browser().resize(width, height));
 
-        Allure.step("Act: Mở trang đăng nhập khách", () -> {
+        act(StepNames.OPEN_CUSTOMER_LOGIN, () -> {
             page.open();
         });
 
-        Allure.step("Assert: Đủ thành phần, không cuộn ngang", () -> {
+        verify("Đủ thành phần, không cuộn ngang", () -> {
             Assert.assertTrue(page.isLoginButtonDisplayed() && page.isRegisterNowDisplayed(), "Nút Login, Register Now phải hiện");
             Assert.assertTrue(page.hasNoHorizontalScroll(), "Không được có thanh cuộn ngang toàn trang");
         });

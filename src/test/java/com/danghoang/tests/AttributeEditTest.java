@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.AttributeEditPage;
 import com.danghoang.pages.AttributeListPage;
 import com.danghoang.pages.DashboardPage;
@@ -10,7 +12,6 @@ import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
 import org.testng.Assert;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -29,9 +30,9 @@ public class AttributeEditTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
 
-        AttributeEditPage edit = Allure.step("Act: Bấm nút Edit ở dòng thuộc tính test", () -> openEditOf(list, name));
+        AttributeEditPage edit = act("Bấm Edit ở dòng thuộc tính test", () -> openEditOf(list, name));
 
-        Allure.step("Assert: Bảng kiểm trang sửa", () -> {
+        verify(StepNames.EDIT_CHECKLIST, () -> {
             Assert.assertTrue(edit.currentUrl().matches(".*/admin/attributes/edit/\\d+\\?lang=en$"), "Thanh địa chỉ: " + edit.currentUrl());
             Assert.assertTrue(edit.isTitleDisplayed(), "Tiêu đề Attribute Information");
             Assert.assertEquals(edit.languageTabs(), List.of("English", "Vietnamese"), "Hai tab");
@@ -40,7 +41,7 @@ public class AttributeEditTest extends AttributeTestBase {
             Assert.assertEquals(edit.saveButtonText(), "Save", "Nút Save");
         });
 
-        Allure.step("Assert: Rê chuột lên biểu tượng cạnh Name hiện Translatable", () ->
+        verify(StepNames.TRANSLATABLE_HINT, () ->
                 Assert.assertEquals(edit.translatableTooltip(), "Translatable", "Chú thích biểu tượng ngôn ngữ"));
     }
 
@@ -56,18 +57,15 @@ public class AttributeEditTest extends AttributeTestBase {
         createAttribute(list, oldName);
         AttributeEditPage edit = openEditOf(list, oldName);
 
-        Allure.step("Act: Đổi Name rồi Save", () -> {
-            edit.enterName(newName);
-            edit.saveAndWait();
-        });
+        act(StepNames.RENAME_AND_SAVE, () -> edit.saveWithName(newName));
 
-        Allure.step("Assert: Thông báo cập nhật, vẫn ở trang sửa với Name mới", () -> {
+        verify("Thông báo cập nhật, vẫn ở trang sửa với Name mới", () -> {
             Assert.assertEquals(edit.getNotifyMessage(), UPDATED, "Thông báo sau khi sửa");
             Assert.assertTrue(edit.isOnEditPage(), "Phải vẫn ở trang sửa: " + edit.currentUrl());
             Assert.assertEquals(edit.nameValue(), newName, "Ô Name sau khi lưu");
         });
 
-        Allure.step("Assert: Danh sách có tên mới, không còn tên cũ", () -> {
+        verify("Danh sách có tên mới, không còn tên cũ", () -> {
             list.open();
             Assert.assertEquals(list.rowIndexesContaining(token).size(), 1, "Số dòng mang mã test");
             Assert.assertTrue(list.rowIndexOf(newName) >= 0, "Phải có dòng mang tên mới");
@@ -85,20 +83,19 @@ public class AttributeEditTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeEditPage edit = openEditOf(list, name);
 
-        Allure.step("Act: Xoá hết Name, bấm Save", () -> {
+        act(StepNames.CLEAR_NAME_AND_SAVE, () -> {
             edit.enterName("");
-            edit.markPage();
             edit.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name", () -> {
+        verify(StepNames.NAME_BLOCKED, () -> {
             Assert.assertFalse(edit.nameValidationMessage().isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(edit.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(edit.isNameFocused(), "Con trỏ phải nằm trong ô Name");
         });
 
-        Allure.step("Assert: Thuộc tính giữ Name cũ", () ->
-                Assert.assertTrue(findRow(list, name) >= 0, "Thuộc tính test phải giữ tên cũ"));
+        verify("Thuộc tính giữ Name cũ", () ->
+                Assert.assertTrue(list.findRow(name) >= 0, "Thuộc tính test phải giữ tên cũ"));
     }
 
     @Test(groups = {"regression", "attribute", "auth", "validation", "knownIssue"}, description = "Sửa Name thành chỉ có khoảng trắng phải báo lỗi, giữ tên cũ")
@@ -110,21 +107,17 @@ public class AttributeEditTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
         String editUrl = openEditOf(list, name).currentUrl();
-        AttributeEditPage edit = new AttributeEditPage(driver());
+        AttributeEditPage edit = new AttributeEditPage();
 
         try {
-            Allure.step("Act: Thay Name bằng 3 dấu cách rồi Save", () -> {
-                edit.enterName("   ");
-                edit.saveAndWait();
-            });
+            act("Thay Name bằng 3 dấu cách rồi bấm Save", () -> edit.saveWithName("   "));
 
-            Allure.step("Assert: Mở lại trang sửa, Name vẫn là tên cũ", () ->
+            verify("Mở lại trang sửa, Name vẫn là tên cũ", () ->
                     Assert.assertEquals(edit.openUrl(editUrl).nameValue(), name, "Name sau khi lưu chuỗi trắng"));
         } finally {
-            Allure.step("Dọn dữ liệu: đặt lại tên cũ nếu tên đã bị lưu rỗng", () -> {
+            cleanUp("đặt lại tên cũ nếu tên đã bị lưu rỗng", () -> {
                 if (!name.equals(edit.openUrl(editUrl).nameValue())) {
-                    edit.enterName(name);
-                    edit.saveAndWait();
+                    edit.saveWithName(name);
                 }
             });
         }
@@ -142,36 +135,28 @@ public class AttributeEditTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeEditPage edit = openEditOf(list, name);
 
-        Allure.step("Act: Bấm tab Vietnamese", () -> edit.clickTab("Vietnamese"));
-        Allure.step("Assert: ?lang=vn, ô Name có sẵn tên tiếng Anh", () -> {
+        act(StepNames.CLICK_VIETNAMESE_TAB, () -> edit.clickTab("Vietnamese"));
+        verify("?lang=vn, ô Name có sẵn tên tiếng Anh", () -> {
             Assert.assertTrue(edit.currentUrl().endsWith("lang=vn"), "Thanh địa chỉ: " + edit.currentUrl());
             Assert.assertEquals(edit.nameValue(), name, "Ô Name ở tab Vietnamese");
         });
 
-        Allure.step("Act: Đổi Name tiếng Việt rồi Save", () -> {
-            edit.enterName(vietnameseName);
-            edit.saveAndWait();
-        });
-        Allure.step("Assert: Cập nhật thành công, vẫn ở tab Vietnamese với tên tiếng Việt", () -> {
+        act("Đổi Name tiếng Việt rồi bấm Save", () -> edit.saveWithName(vietnameseName));
+        verify("Cập nhật thành công, vẫn ở tab Vietnamese với tên tiếng Việt", () -> {
             Assert.assertEquals(edit.getNotifyMessage(), UPDATED, "Thông báo sau khi sửa");
             Assert.assertEquals(edit.activeTab(), "Vietnamese", "Tab đang chọn");
             Assert.assertEquals(edit.nameValue(), vietnameseName, "Ô Name ở tab Vietnamese");
         });
 
-        Allure.step("Assert: Tab English vẫn là tên tiếng Anh", () -> {
+        verify("Tab English vẫn là tên tiếng Anh", () -> {
             edit.clickTab("English");
             Assert.assertEquals(edit.nameValue(), name, "Ô Name ở tab English");
         });
-        Allure.step("Assert: Danh sách vẫn hiện tên tiếng Anh", () ->
-                Assert.assertTrue(findRow(list, name) >= 0, "Danh sách phải hiện tên tiếng Anh"));
+        verify("Danh sách vẫn hiện tên tiếng Anh", () ->
+                Assert.assertTrue(list.findRow(name) >= 0, "Danh sách phải hiện tên tiếng Anh"));
     }
 
-    @DataProvider(name = "expiredSessionForms", parallel = true)
-    public Object[][] expiredSessionForms() {
-        return new Object[][]{{"a", "create"}, {"b", "edit"}};
-    }
-
-    @Test(dataProvider = "expiredSessionForms", groups = {"regression", "attribute", "auth", "security"},
+    @Test(dataProvider = "expiredSessionForms", dataProviderClass = DataProviderFactory.class, groups = {"regression", "attribute", "auth", "security"},
             description = "Hết phiên đăng nhập khi đang nhập thì không lưu")
     @Severity(SeverityLevel.NORMAL)
     @Description("Kiểm tra tab 1 đang nhập ở form Add New Attribute / trang sửa, tab 2 đăng xuất, tab 1 bấm Save thì ra 419 PAGE EXPIRED hoặc về /login; đăng nhập lại thấy dữ liệu không đổi.")
@@ -182,9 +167,9 @@ public class AttributeEditTest extends AttributeTestBase {
         String originalName = "AutoAttr_" + token;
         String typedName = ("create".equals(formType) ? "AutoAttrSess_" : "AutoAttrSessEd_") + token;
         AttributeListPage list = openAttributesAsAdmin();
-        AttributeEditPage edit = new AttributeEditPage(driver());
+        AttributeEditPage edit = new AttributeEditPage();
 
-        Allure.step("Arrange: Tab 1 mở form " + formType + ", nhập Name", () -> {
+        arrange("Tab 1 mở form " + formType + ", nhập Name", () -> {
             if ("create".equals(formType)) {
                 list.open();
                 list.enterName(typedName);
@@ -195,13 +180,9 @@ public class AttributeEditTest extends AttributeTestBase {
         });
         String formTab = browser().currentHandle();
 
-        Allure.step("Act: Tab 2 đăng xuất", () -> {
-            browser().openNewTab();
-            new DashboardPage(driver()).open().logout();
-            browser().closeTabAndSwitchTo(formTab);
-        });
+        act(StepNames.TAB2_LOGOUT, () -> new DashboardPage().logoutInNewTab(formTab));
 
-        Allure.step("Act: Tab 1 bấm Save", () -> {
+        act(StepNames.TAB1_SAVE, () -> {
             if ("create".equals(formType)) {
                 list.clickSave();
             } else {
@@ -209,15 +190,15 @@ public class AttributeEditTest extends AttributeTestBase {
             }
         });
 
-        Allure.step("Assert: 419 PAGE EXPIRED hoặc về /login", () -> {
+        verify(StepNames.SESSION_EXPIRED, () -> {
             edit.waitForPath("/login");
             Assert.assertTrue(edit.isPageExpired() || "/login".equals(edit.currentPath()),
                     "Gửi form sau khi hết phiên phải bị chặn: " + edit.currentUrl());
         });
 
-        Allure.step("Assert: Đăng nhập lại — dữ liệu không đổi", () -> {
+        verify(StepNames.DATA_UNCHANGED, () -> {
             loginAsAdmin();
-            Assert.assertEquals(findRow(list, typedName), -1, "Không được có thuộc tính mang tên vừa nhập");
+            Assert.assertEquals(list.findRow(typedName), -1, "Không được có thuộc tính mang tên vừa nhập");
             if (!"create".equals(formType)) {
                 Assert.assertTrue(list.rowIndexOf(originalName) >= 0, "Thuộc tính test phải giữ tên cũ");
             }

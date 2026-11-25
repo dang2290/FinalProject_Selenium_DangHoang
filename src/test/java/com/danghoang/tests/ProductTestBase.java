@@ -1,6 +1,5 @@
 package com.danghoang.tests;
 
-import com.danghoang.base.BaseTest;
 import com.danghoang.pages.BrandPage;
 import com.danghoang.pages.CategoryListPage;
 import com.danghoang.pages.DigitalProductFormPage;
@@ -10,9 +9,6 @@ import com.danghoang.pages.ProductCreatePage.SaveButton;
 import com.danghoang.pages.ProductEditPage;
 import com.danghoang.pages.ProductListPage;
 import com.danghoang.utils.TestDataGenerator;
-import io.qameta.allure.Allure;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
 
 import java.util.ArrayList;
@@ -23,7 +19,7 @@ import java.util.List;
  * PC-1 đăng nhập · PC-2 tạo sản phẩm test (Save &amp; Unpublish) · PC-3 dọn · PC-5 tạo sản phẩm số test.
  * PC-4: chỉ đụng sản phẩm có tên chứa mã truy vết của test; sản phẩm có thể bị lưu tên rỗng thì ghi id để dọn.
  */
-abstract class ProductTestBase extends BaseTest {
+abstract class ProductTestBase extends TrackedDataTestBase {
 
     protected static final String INSERTED = "Product has been inserted successfully";
     protected static final String UPDATED = "Product has been updated successfully";
@@ -40,8 +36,6 @@ abstract class ProductTestBase extends BaseTest {
             "Shipping Configuration", "Low Stock Quantity Warning", "Stock Visibility State", "Cash on Delivery", "Featured",
             "Todays Deal", "Flash Deal", "Estimate Shipping Time", "Vat & TAX");
 
-    private static final Logger LOG = LogManager.getLogger(ProductTestBase.class);
-    private final ThreadLocal<List<String>> tokens = ThreadLocal.withInitial(ArrayList::new);
     private final ThreadLocal<List<String>> digitalTokens = ThreadLocal.withInitial(ArrayList::new);
     private final ThreadLocal<List<String>> productIds = ThreadLocal.withInitial(ArrayList::new);
     private final ThreadLocal<List<String>> digitalIds = ThreadLocal.withInitial(ArrayList::new);
@@ -52,13 +46,6 @@ abstract class ProductTestBase extends BaseTest {
     protected void alsoCleanCategoryAndBrand(String token) {
         categoryTokens.get().add(token);
         brandTokens.get().add(token);
-    }
-
-    /** Mã truy vết cho sản phẩm thường — sản phẩm có tên chứa mã này bị xoá khi test kết thúc. */
-    protected String newToken(String testName) {
-        String token = TestDataGenerator.token(testName);
-        tokens.get().add(token);
-        return token;
     }
 
     /** Mã truy vết cho sản phẩm số — dọn ở danh sách Digital Products. */
@@ -79,57 +66,47 @@ abstract class ProductTestBase extends BaseTest {
 
     protected ProductListPage openProductsAsAdmin() {
         loginAsAdmin();
-        return Allure.step("Arrange: Mở All products", () -> new ProductListPage(driver()).open());
+        return arrange("Mở All products", () -> new ProductListPage().open());
     }
 
     protected ProductCreatePage openCreateForm() {
-        return Allure.step("Arrange: Mở Add New Product", () -> new ProductCreatePage(driver()).open());
+        return arrange("Mở Add New Product", () -> new ProductCreatePage().open());
     }
 
     /** PC-2: tạo sản phẩm với dữ liệu tối thiểu, lưu bằng nút đã chọn. */
-    protected void createProduct(String name, SaveButton button) {
-        Allure.step("Arrange: Tạo sản phẩm test " + name, () -> {
-            ProductCreatePage form = new ProductCreatePage(driver()).open();
-            form.fillRequired(name);
-            form.saveAndWait(button);
-            Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Tạo sản phẩm test phải thành công");
+    protected ProductListPage createProduct(String name, SaveButton button) {
+        return arrange("Tạo sản phẩm test " + name, () -> {
+            ProductListPage created = new ProductCreatePage().open().createProduct(name, button);
+            Assert.assertEquals(created.getNotifyMessage(), INSERTED, "Tạo sản phẩm test phải thành công");
+            return created;
         });
     }
 
-    protected void createProduct(String name) {
-        createProduct(name, SaveButton.UNPUBLISH);
+    protected ProductListPage createProduct(String name) {
+        return createProduct(name, SaveButton.UNPUBLISH);
     }
 
     /** PC-5: tạo sản phẩm số với dữ liệu tối thiểu. */
-    protected void createDigital(String name) {
-        Allure.step("Arrange: Tạo sản phẩm số test " + name, () -> {
-            DigitalProductFormPage form = new DigitalProductFormPage(driver()).openCreate();
-            form.fillRequired(name, "10");
-            form.submitAndWait();
-            Assert.assertEquals(form.getNotifyMessage(), DIGITAL_INSERTED, "Tạo sản phẩm số test phải thành công");
+    protected DigitalProductListPage createDigital(String name) {
+        return arrange("Tạo sản phẩm số test " + name, () -> {
+            DigitalProductListPage created = new DigitalProductFormPage().openCreate().createProduct(name, "10");
+            Assert.assertEquals(created.getNotifyMessage(), DIGITAL_INSERTED, "Tạo sản phẩm số test phải thành công");
+            return created;
         });
     }
 
-    /** Mở All products, tìm theo từ khoá, trả về vị trí dòng mang đúng tên (-1 nếu không có). */
-    protected int findRow(ProductListPage list, String keyword, String name) {
-        list.open();
-        list.search(keyword);
-        return list.rowIndexOf(name);
-    }
-
     protected ProductEditPage openEditOf(ProductListPage list, String keyword, String name) {
-        return Allure.step("Arrange: Mở trang sửa của " + name, () -> {
-            int row = findRow(list, keyword, name);
+        return arrange("Mở trang sửa của " + name, () -> {
+            int row = list.findRow(keyword, name);
             Assert.assertTrue(row >= 0, "Phải tìm thấy sản phẩm test " + name);
             return list.editRow(row);
         });
     }
 
     protected DigitalProductFormPage openDigitalEditOf(String keyword, String name) {
-        return Allure.step("Arrange: Mở trang sửa sản phẩm số " + name, () -> {
-            DigitalProductListPage list = new DigitalProductListPage(driver()).open();
-            list.search(keyword);
-            int row = list.rowIndexOf(name);
+        return arrange("Mở trang sửa sản phẩm số " + name, () -> {
+            DigitalProductListPage list = new DigitalProductListPage();
+            int row = list.findRow(keyword, name);
             Assert.assertTrue(row >= 0, "Phải tìm thấy sản phẩm số test " + name);
             return list.editRow(row);
         });
@@ -137,77 +114,57 @@ abstract class ProductTestBase extends BaseTest {
 
     @Override
     protected void cleanUpTestData() {
-        List<String> physical = new ArrayList<>(tokens.get());
-        List<String> digital = new ArrayList<>(digitalTokens.get());
-        List<String> ids = new ArrayList<>(productIds.get());
-        List<String> dIds = new ArrayList<>(digitalIds.get());
-        List<String> categories = new ArrayList<>(categoryTokens.get());
-        List<String> brands = new ArrayList<>(brandTokens.get());
-        categoryTokens.remove();
-        brandTokens.remove();
-        tokens.remove();
-        digitalTokens.remove();
-        productIds.remove();
-        digitalIds.remove();
+        List<String> physical = takeTokens();
+        List<String> digital = takeAll(digitalTokens);
+        List<String> ids = takeAll(productIds);
+        List<String> dIds = takeAll(digitalIds);
+        List<String> categories = takeAll(categoryTokens);
+        List<String> brands = takeAll(brandTokens);
         dismissAlertIfOpen();
         for (String id : ids) {
             String token = TestDataGenerator.token("Del");
             physical.add(token);
-            runCleanup("Dọn dữ liệu: đổi tên sản phẩm id " + id + " thành " + token, () -> renameProduct(id, token));
+            runCleanup("đổi tên sản phẩm id " + id + " thành " + token, () -> renameProduct(id, token));
         }
         for (String id : dIds) {
             String token = TestDataGenerator.token("Del");
             digital.add(token);
-            runCleanup("Dọn dữ liệu: đổi tên sản phẩm số id " + id + " thành " + token, () -> renameDigital(id, token));
+            runCleanup("đổi tên sản phẩm số id " + id + " thành " + token, () -> renameDigital(id, token));
         }
         for (String token : digital) {
-            runCleanup("Dọn dữ liệu: xoá sản phẩm số chứa " + token,
-                    () -> new DigitalProductListPage(driver()).deleteAllContaining(token));
+            runCleanup("xoá sản phẩm số chứa " + token,
+                    () -> new DigitalProductListPage().deleteAllContaining(token));
         }
         for (String token : physical) {
-            runCleanup("Dọn dữ liệu: xoá sản phẩm chứa " + token,
-                    () -> new ProductListPage(driver()).deleteAllContaining(token));
+            runCleanup("xoá sản phẩm chứa " + token,
+                    () -> new ProductListPage().deleteAllContaining(token));
         }
         // Xoá sau sản phẩm: không để sản phẩm trỏ vào danh mục / brand đã xoá
         for (String token : categories) {
-            runCleanup("Dọn dữ liệu: xoá danh mục chứa " + token,
-                    () -> new CategoryListPage(driver()).deleteAllContaining(token));
+            runCleanup("xoá danh mục chứa " + token,
+                    () -> new CategoryListPage().deleteAllContaining(token));
         }
         for (String token : brands) {
-            runCleanup("Dọn dữ liệu: xoá brand chứa " + token,
-                    () -> new BrandPage(driver()).deleteAllContaining(token));
+            runCleanup("xoá brand chứa " + token,
+                    () -> new BrandPage().deleteAllContaining(token));
         }
     }
 
     private void renameProduct(String id, String token) {
         browser().openPath("/admin/products/admin/" + id + "/edit?lang=en");
-        ProductEditPage edit = new ProductEditPage(driver());
+        ProductEditPage edit = new ProductEditPage();
         if (edit.isPageNotFound() || !edit.isTitleDisplayed()) {
             return;
         }
-        edit.enterName(token);
-        edit.updateAndWait();
+        edit.saveWithName(token);
     }
 
     private void renameDigital(String id, String token) {
         browser().openPath("/admin/digitalproducts/edit/" + id + "?lang=en");
-        DigitalProductFormPage edit = new DigitalProductFormPage(driver());
+        DigitalProductFormPage edit = new DigitalProductFormPage();
         if (edit.isPageNotFound() || !edit.isEditTitleDisplayed()) {
             return;
         }
-        edit.enterName(token);
-        edit.submitAndWait();
-    }
-
-    private void runCleanup(String title, Runnable action) {
-        try {
-            Allure.step(title, action::run);
-        } catch (RuntimeException e) {
-            LOG.warn("{} — không dọn được, cần xoá tay", title, e);
-        }
-    }
-
-    private void dismissAlertIfOpen() {
-        browser().dismissAlertIfOpen();
+        edit.saveWithName(token);
     }
 }

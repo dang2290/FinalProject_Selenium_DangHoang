@@ -1,14 +1,19 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
+import io.qameta.allure.Allure;
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 
 import java.util.List;
 
 /** Trang đăng nhập khách /users/login — locator lấy từ DOM thật 03-11-2026. */
 public class CustomerLoginPage extends StorefrontPage {
 
+    /** JS: chữ trong khối cha của liên kết Register Now, trừ chữ của chính liên kết. */
+    private static final String JS_REGISTER_PROMPT = "const a=[...document.querySelectorAll('a')].find(x=>x.innerText.trim()==='Register Now');"
+            + "return a.parentElement.innerText.replace(a.innerText,'').trim();";
     private static final By FORM = By.cssSelector("form[action$='/login']");
     private static final By EMAIL_INPUT = By.cssSelector("form[action$='/login'] input[name='email']");
     private static final By PASSWORD_INPUT = By.cssSelector("form[action$='/login'] input[name='password']");
@@ -22,93 +27,92 @@ public class CustomerLoginPage extends StorefrontPage {
     private static final By FIELD_ERROR = By.cssSelector("form[action$='/login'] .invalid-feedback");
     private static final By INVALID_FIELDS = By.cssSelector("form[action$='/login'] .is-invalid");
 
-    public CustomerLoginPage(WebDriver driver) {
-        super(driver);
-    }
-
     @Step("Mở trang đăng nhập khách")
     public CustomerLoginPage open() {
         openStorefront("/users/login", EMAIL_INPUT);
         return this;
     }
 
-    @Step("Đăng nhập khách với email {email}")
+    // Không dùng @Step ở method nhận mật khẩu: Allure ghi mọi tham số vào JSON, kể cả khi @Param(mode = MASKED)
     public void login(String email, String password) {
-        type(EMAIL_INPUT, email);
-        type(PASSWORD_INPUT, password);
-        click(LOGIN_BUTTON);
+        Allure.step("Đăng nhập khách với email " + email, () -> {
+            WebUI.setText(EMAIL_INPUT, email);
+            WebUI.setText(PASSWORD_INPUT, password);
+            WebUI.clickElement(LOGIN_BUTTON);
+        });
     }
 
     @Step("Bấm Login khi để trống")
     public void submitEmpty() {
-        click(LOGIN_BUTTON);
+        WebUI.clickElement(LOGIN_BUTTON);
     }
 
     @Step("Bấm Register Now")
-    public void clickRegisterNow() {
-        click(REGISTER_NOW_LINK);
+    public RegistrationPage clickRegisterNow() {
+        WebUI.clickElement(REGISTER_NOW_LINK);
+        return new RegistrationPage();
     }
 
     @Step("Bấm Forgot password?")
-    public void clickForgotPassword() {
-        click(FORGOT_PASSWORD_LINK);
+    public ForgotPasswordPage clickForgotPassword() {
+        WebUI.clickElement(FORGOT_PASSWORD_LINK);
+        return new ForgotPasswordPage();
     }
 
     public boolean isTitleDisplayed() {
-        return isVisible(TITLE);
+        return WebUI.isElementVisible(TITLE);
     }
 
     public boolean isEmailDisplayed() {
-        return isPresentNow(EMAIL_INPUT);
+        return WebUI.isElementDisplayedNow(EMAIL_INPUT);
     }
 
     public boolean isPasswordDisplayed() {
-        return isPresentNow(PASSWORD_INPUT);
+        return WebUI.isElementDisplayedNow(PASSWORD_INPUT);
     }
 
     public boolean isRememberMeDisplayed() {
-        return isPresentNow(REMEMBER_LABEL);
+        return WebUI.isElementDisplayedNow(REMEMBER_LABEL);
     }
 
     public boolean isForgotPasswordDisplayed() {
-        return isPresentNow(FORGOT_PASSWORD_LINK);
+        return WebUI.isElementDisplayedNow(FORGOT_PASSWORD_LINK);
     }
 
     public boolean isLoginButtonDisplayed() {
-        return isPresentNow(LOGIN_BUTTON);
+        return WebUI.isElementDisplayedNow(LOGIN_BUTTON);
     }
 
     public boolean isRegisterNowDisplayed() {
-        return isPresentNow(REGISTER_NOW_LINK);
+        return WebUI.isElementDisplayedNow(REGISTER_NOW_LINK);
     }
 
     public boolean areHeaderLinksDisplayed() {
-        return isPresentNow(HEADER_LOGIN) && isPresentNow(HEADER_REGISTRATION);
+        return WebUI.isElementDisplayedNow(HEADER_LOGIN) && WebUI.isElementDisplayedNow(HEADER_REGISTRATION);
     }
 
     /** Dòng chữ đứng ngay trên liên kết Register Now. */
     public String registerPrompt() {
-        return (String) js("const a=[...document.querySelectorAll('a')].find(x=>x.innerText.trim()==='Register Now');"
-                + "return a.parentElement.innerText.replace(a.innerText,'').trim();");
+        return (String) WebUI.executeJS(JS_REGISTER_PROMPT);
     }
 
     public String emailFieldError() {
-        return getText(FIELD_ERROR);
+        return WebUI.getElementText(FIELD_ERROR);
     }
 
     public List<String> invalidFieldNames() {
-        return driver.findElements(INVALID_FIELDS).stream().map(e -> e.getAttribute("name")).toList();
+        return WebUI.getAllElementsAttribute(INVALID_FIELDS, "name");
     }
 
     public String emailValue() {
-        return driver.findElement(EMAIL_INPUT).getAttribute("value");
+        return WebUI.getElementValue(EMAIL_INPUT);
     }
 
     public String passwordValue() {
-        return driver.findElement(PASSWORD_INPUT).getAttribute("value");
+        return WebUI.getElementValue(PASSWORD_INPUT);
     }
 
     public boolean isStillOnPage() {
-        return isOn("/users/login") && isPresentNow(FORM);
+        return isOn("/users/login") && WebUI.isElementDisplayedNow(FORM);
     }
 }

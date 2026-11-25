@@ -1,0 +1,6 @@
+[
+  { "name": "Lỗi đã biết (knownIssue)", "matchedStatuses": ["failed"], "messageRegex": "(?s).*LỖI ĐÃ BIẾT.*" },
+  { "name": "Sai kỳ vọng, cần xem", "matchedStatuses": ["failed"], "messageRegex": "(?s)(?!.*LỖI ĐÃ BIẾT).*" },
+  { "name": "Test không chạy hết (timeout, element, môi trường)", "matchedStatuses": ["broken"] },
+  { "name": "Bị bỏ qua", "matchedStatuses": ["skipped"] }
+]

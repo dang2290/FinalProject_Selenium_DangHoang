@@ -1,8 +1,9 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 
 /** Trang quên mật khẩu /password/reset — locator lấy từ DOM thật 03-11-2026. */
 public class ForgotPasswordPage extends StorefrontPage {
@@ -13,10 +14,6 @@ public class ForgotPasswordPage extends StorefrontPage {
     private static final By SUBTITLE = By.xpath("//*[normalize-space()='Enter your email address to recover your password.']");
     private static final By BACK_TO_LOGIN_LINK = By.xpath("//a[normalize-space()='Back to Login']");
 
-    public ForgotPasswordPage(WebDriver driver) {
-        super(driver);
-    }
-
     @Step("Mở trang quên mật khẩu")
     public ForgotPasswordPage open() {
         openStorefront("/password/reset", EMAIL_INPUT);
@@ -26,44 +23,46 @@ public class ForgotPasswordPage extends StorefrontPage {
     /** Dùng khi đến trang này bằng một liên kết, không mở thẳng địa chỉ. */
     @Step("Chờ trang quên mật khẩu tải xong")
     public ForgotPasswordPage waitUntilLoaded() {
-        waitForVisible(EMAIL_INPUT);
+        WebUI.waitForElementVisible(EMAIL_INPUT);
         closeAdPopupIfShown();
         return this;
     }
 
     @Step("Gửi yêu cầu đặt lại mật khẩu cho email '{email}'")
     public void requestReset(String email) {
-        type(EMAIL_INPUT, email);
-        click(SEND_BUTTON);
+        WebUI.setText(EMAIL_INPUT, email);
+        WebUI.clickElement(SEND_BUTTON);
     }
 
     @Step("Bấm Send Password Reset Link khi để trống")
     public void submitEmpty() {
-        click(SEND_BUTTON);
+        WebUI.clickElement(SEND_BUTTON);
     }
 
+    /** Link trỏ về đăng nhập khách, kể cả khi đến từ trang quản trị (lỗi đã biết AMB-LOGIN-01). */
     @Step("Bấm Back to Login")
-    public void clickBackToLogin() {
-        click(BACK_TO_LOGIN_LINK);
+    public CustomerLoginPage clickBackToLogin() {
+        WebUI.clickElement(BACK_TO_LOGIN_LINK);
+        return new CustomerLoginPage();
     }
 
     public boolean isTitleDisplayed() {
-        return isVisible(TITLE);
+        return WebUI.isElementVisible(TITLE);
     }
 
     public boolean isSubtitleDisplayed() {
-        return isPresentNow(SUBTITLE);
+        return WebUI.isElementDisplayedNow(SUBTITLE);
     }
 
     public boolean isEmailDisplayed() {
-        return isPresentNow(EMAIL_INPUT);
+        return WebUI.isElementDisplayedNow(EMAIL_INPUT);
     }
 
     public boolean isSendButtonDisplayed() {
-        return isPresentNow(SEND_BUTTON) && getText(SEND_BUTTON).equals("Send Password Reset Link");
+        return WebUI.isElementDisplayedNow(SEND_BUTTON) && WebUI.getElementText(SEND_BUTTON).equals("Send Password Reset Link");
     }
 
     public boolean isBackToLoginDisplayed() {
-        return isPresentNow(BACK_TO_LOGIN_LINK);
+        return WebUI.isElementDisplayedNow(BACK_TO_LOGIN_LINK);
     }
 }

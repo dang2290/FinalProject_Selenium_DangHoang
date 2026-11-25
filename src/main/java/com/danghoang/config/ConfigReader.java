@@ -1,11 +1,15 @@
 package com.danghoang.config;
 
+import com.danghoang.helpers.PropertiesHelper;
+
 import io.github.cdimascio.dotenv.Dotenv;
 
 import java.net.URI;
+import java.util.Properties;
 
 /**
- * Đọc cấu hình theo thứ tự ưu tiên: -Dkey (System property) → biến môi trường → file .env.
+ * Nguồn cấu hình DUY NHẤT (vai trò ParameterManager + ConfigData), theo thứ tự ưu tiên:
+ * -Dkey → biến môi trường → .env → configs/&lt;TEST_ENV&gt;.properties → configs/config.properties.
  * CI truyền qua biến môi trường / GitHub Secrets; máy local dùng .env.
  */
 public final class ConfigReader {
@@ -14,13 +18,27 @@ public final class ConfigReader {
 
     private final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
 
-    private ConfigReader() {}
+    private final Properties properties;
+    private final boolean screenshotAllSteps;
+
+    private ConfigReader() {
+        properties = PropertiesHelper.load(fromOverrides("TEST_ENV"));
+        screenshotAllSteps = Boolean.parseBoolean(get("SCREENSHOT_ALL_STEPS", "false"));
+    }
 
     public static ConfigReader getInstance() {
         return INSTANCE;
     }
 
     private String get(String key, String defaultValue) {
+        String value = fromOverrides(key);
+        if (value == null || value.isBlank()) {
+            value = properties.getProperty(key);
+        }
+        return (value == null || value.isBlank()) ? defaultValue : value.trim();
+    }
+
+    private String fromOverrides(String key) {
         String value = System.getProperty(key);
         if (value == null || value.isBlank()) {
             value = System.getenv(key);
@@ -28,7 +46,7 @@ public final class ConfigReader {
         if (value == null || value.isBlank()) {
             value = dotenv.get(key);
         }
-        return (value == null || value.isBlank()) ? defaultValue : value.trim();
+        return value;
     }
 
     private String required(String key) {
@@ -55,6 +73,10 @@ public final class ConfigReader {
 
     public int getTimeout() {
         return Integer.parseInt(get("TIMEOUT", "15"));
+    }
+
+    public boolean isScreenshotAllSteps() {
+        return screenshotAllSteps;
     }
 
     public String getUsername() {

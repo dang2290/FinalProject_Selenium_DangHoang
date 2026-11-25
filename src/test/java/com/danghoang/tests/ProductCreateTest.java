@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.pages.FormField;
 import com.danghoang.utils.EnvReferenceData;
 import com.danghoang.pages.MediaLibraryModal;
 import com.danghoang.pages.ProductCreatePage;
@@ -37,24 +39,24 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Assert: Tiêu đề và các khối", () -> {
+        verify("Tiêu đề và các khối", () -> {
             Assert.assertTrue(form.isTitleDisplayed(), "Tiêu đề Add New Product");
             Assert.assertEquals(form.sectionTitles(), PRODUCT_FORM_SECTIONS, "Các khối của form");
         });
-        Allure.step("Assert: Giá trị mặc định", () -> {
-            Assert.assertEquals(form.fieldValue("weight"), "0.00", "Weight");
-            Assert.assertEquals(form.fieldValue("min_qty"), "1", "Minimum Purchase Qty");
-            Assert.assertEquals(form.fieldValue("unit_price"), "0", "Unit price");
-            Assert.assertEquals(form.fieldValue("discount"), "0", "Discount");
-            Assert.assertEquals(form.fieldValue("current_stock"), "0", "Quantity");
-            Assert.assertEquals(form.fieldValue("tax[]"), "0", "Tax");
-            Assert.assertEquals(form.selectedOptionText("discount_type"), "Flat", "Kiểu Discount");
-            Assert.assertEquals(form.fieldValue("low_stock_quantity"), "1", "Low Stock Quantity");
-            Assert.assertEquals(form.checkedRadio("stock_visibility_state"), "quantity", "Show Stock Quantity phải bật");
-            Assert.assertTrue(form.isChecked("cash_on_delivery"), "Cash on Delivery phải bật");
-            Assert.assertFalse(form.isChecked("featured"), "Featured phải tắt");
-            Assert.assertFalse(form.isChecked("todays_deal"), "Todays Deal phải tắt");
-            Assert.assertEquals(form.selectedOptionText("video_provider"), "Youtube", "Video Provider");
+        verify("Giá trị mặc định", () -> {
+            Assert.assertEquals(form.fieldValue(FormField.WEIGHT), "0.00", "Weight");
+            Assert.assertEquals(form.fieldValue(FormField.MIN_QTY), "1", "Minimum Purchase Qty");
+            Assert.assertEquals(form.fieldValue(FormField.UNIT_PRICE), "0", "Unit price");
+            Assert.assertEquals(form.fieldValue(FormField.DISCOUNT), "0", "Discount");
+            Assert.assertEquals(form.fieldValue(FormField.QUANTITY), "0", "Quantity");
+            Assert.assertEquals(form.fieldValue(FormField.TAX), "0", "Tax");
+            Assert.assertEquals(form.selectedOptionText(FormField.DISCOUNT_TYPE), "Flat", "Kiểu Discount");
+            Assert.assertEquals(form.fieldValue(FormField.LOW_STOCK_QUANTITY), "1", "Low Stock Quantity");
+            Assert.assertEquals(form.checkedRadio(FormField.STOCK_VISIBILITY), "quantity", "Show Stock Quantity phải bật");
+            Assert.assertTrue(form.isChecked(FormField.CASH_ON_DELIVERY), "Cash on Delivery phải bật");
+            Assert.assertFalse(form.isChecked(FormField.FEATURED), "Featured phải tắt");
+            Assert.assertFalse(form.isChecked(FormField.TODAYS_DEAL), "Todays Deal phải tắt");
+            Assert.assertEquals(form.selectedOptionText(FormField.VIDEO_PROVIDER), "Youtube", "Video Provider");
             Assert.assertEquals(form.saveButtonTexts(), List.of("Save & Unpublish", "Save & Publish"), "Nút lưu cuối form");
         });
     }
@@ -67,26 +69,23 @@ public class ProductCreateTest extends ProductTestBase {
         String name = "AutoProd_" + newToken("TC007");
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
-        ProductListPage list = new ProductListPage(driver());
 
-        Allure.step("Act: Nhập dữ liệu, bấm Save & Unpublish", () -> {
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
-        });
+        ProductListPage list = act("Nhập dữ liệu rồi bấm Save & Unpublish",
+                () -> form.createProduct(name, SaveButton.UNPUBLISH));
 
-        Allure.step("Assert: Thêm thành công, về In House Products", () -> {
-            Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
-            Assert.assertEquals(form.currentPath(), Listing.IN_HOUSE.path(), "Đường dẫn sau khi lưu");
+        verify("Thêm thành công, về In House Products", () -> {
+            Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
+            Assert.assertEquals(list.currentPath(), Listing.IN_HOUSE.path(), "Đường dẫn sau khi lưu");
         });
-        Allure.step("Assert: Dòng sản phẩm đúng giá, kho, Published tắt", () -> {
+        verify("Dòng sản phẩm đúng giá, kho, Published tắt", () -> {
             int row = list.waitUntilLoaded().rowIndexOf(name);
             Assert.assertTrue(row >= 0 && row < TOP_ROWS, "Sản phẩm mới phải ở đầu bảng, thực tế dòng " + (row + 1));
             Assert.assertEquals(list.basePriceOfRow(row), "$10.00", "Base Price");
             Assert.assertEquals(list.totalStockOfRow(row), "5", "Total Stock");
             Assert.assertFalse(list.isSwitchOn(row, RowSwitch.PUBLISHED), "Published phải tắt");
         });
-        Allure.step("Assert: Meta Title bằng Name", () ->
-                Assert.assertEquals(openEditOf(list, name, name).fieldValue("meta_title"), name, "Meta Title"));
+        verify("Meta Title bằng Name", () ->
+                Assert.assertEquals(openEditOf(list, name, name).fieldValue(FormField.META_TITLE), name, "Meta Title"));
     }
 
     @Test(groups = {"smoke", "product", "auth", "criticalPath"}, description = "Tạo sản phẩm bằng Save & Publish")
@@ -98,14 +97,11 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Nhập dữ liệu, bấm Save & Publish", () -> {
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.PUBLISH);
-        });
+        ProductListPage list = act("Nhập dữ liệu rồi bấm Save & Publish", () -> form.createProduct(name, SaveButton.PUBLISH));
 
-        Allure.step("Assert: Thêm thành công, Published bật", () -> {
-            Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
-            ProductListPage list = new ProductListPage(driver()).waitUntilLoaded();
+        verify("Thêm thành công, Published bật", () -> {
+            Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
+            list.waitUntilLoaded();
             int row = list.rowIndexOf(name);
             Assert.assertTrue(row >= 0, "Phải có dòng sản phẩm mới");
             Assert.assertTrue(list.isSwitchOn(row, RowSwitch.PUBLISHED), "Published phải bật");
@@ -114,32 +110,31 @@ public class ProductCreateTest extends ProductTestBase {
 
     @DataProvider(name = "missingRequired", parallel = true)
     public Object[][] missingRequired() {
-        return new Object[][]{{"AEC_PROD_TC_022", "name"}, {"AEC_PROD_TC_023", "unit"}};
+        return new Object[][]{{"AEC_PROD_TC_022", FormField.NAME}, {"AEC_PROD_TC_023", FormField.UNIT}};
     }
 
     @Test(dataProvider = "missingRequired", groups = {"regression", "product", "auth", "validation"},
             description = "Không tạo được khi thiếu Product Name / Unit")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra để trống Product Name (TC_022) hoặc Unit (TC_023) rồi Save & Unpublish thì trình duyệt chặn: không gửi form, con trỏ về đúng ô, có bong bóng nhắc nhập.")
-    public void testMissingRequiredBlocked(String testId, String field) {
+    public void testMissingRequiredBlocked(String testId, FormField field) {
         tc(testId, "regression", "product", "auth", "validation");
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Bỏ trống " + field + ", bấm Save & Unpublish", () -> {
-            if ("name".equals(field)) {
+        act("Bỏ trống " + field + ", bấm Save & Unpublish", () -> {
+            if (field == FormField.NAME) {
                 form.enterUnit("pc");
             } else {
                 form.enterName("AutoProd_" + newToken("TC023"));
             }
-            form.markPage();
             form.clickSave(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô " + field, () -> {
+        verify("Trình duyệt chặn ở ô " + field, () -> {
             Assert.assertFalse(form.validationMessageOf(field).isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(form.isSamePageInstance(), "Không được gửi form");
-            Assert.assertEquals(form.focusedFieldName(), field, "Con trỏ phải ở ô " + field);
+            Assert.assertEquals(form.focusedFieldName(), field.toString(), "Con trỏ phải ở ô " + field);
         });
     }
 
@@ -151,12 +146,12 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Name toàn khoảng trắng, bấm Save & Unpublish", () -> {
+        act("Name toàn khoảng trắng rồi bấm Save & Unpublish", () -> {
             form.fillRequired("   ");
             form.saveAndWait(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Ở lại form, khối đỏ báo Name bắt buộc", () -> {
+        verify("Ở lại form, khối đỏ báo Name bắt buộc", () -> {
             Assert.assertEquals(form.currentPath(), "/admin/products/create", "Phải ở lại form");
             Assert.assertTrue(form.errorMessages().contains(NAME_REQUIRED), "Khối lỗi: " + form.errorMessages());
         });
@@ -172,17 +167,12 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Tạo sản phẩm với Name 255 ký tự", () -> {
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
-        });
-        Allure.step("Assert: Thêm thành công", () ->
-                Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
+        ProductListPage list = act("Tạo sản phẩm với Name 255 ký tự", () -> form.createProduct(name, SaveButton.UNPUBLISH));
+        verify(StepNames.CREATED, () ->
+                Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
 
-        Allure.step("Assert: Trang sửa hiện đủ 255 ký tự", () -> {
-            ProductListPage list = new ProductListPage(driver());
-            list.open();
-            list.search(token);
+        verify("Trang sửa hiện đủ 255 ký tự", () -> {
+            list.searchFor(token);
             Assert.assertFalse(list.rowIndexesContaining(token).isEmpty(), "Phải tìm thấy sản phẩm test");
             Assert.assertEquals(list.editRow(list.rowIndexesContaining(token).get(0)).nameValue(), name, "Ô Name");
         });
@@ -206,7 +196,7 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Nhập dữ liệu " + kind + ", bấm Save & Unpublish", () -> {
+        act("Nhập dữ liệu " + kind + ", bấm Save & Unpublish", () -> {
             if ("name256".equals(kind)) {
                 form.fillRequired(TestDataGenerator.padTo("P256_" + token + "_", 'x', 256));
             } else {
@@ -216,7 +206,7 @@ public class ProductCreateTest extends ProductTestBase {
             form.saveAndWait(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Ở lại form, khối đỏ báo lỗi", () -> {
+        verify("Ở lại form, khối đỏ báo lỗi", () -> {
             Assert.assertEquals(form.currentPath(), "/admin/products/create", "Phải ở lại form");
             Assert.assertTrue(form.errorMessages().contains(message), "Khối lỗi: " + form.errorMessages());
         });
@@ -232,16 +222,16 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Unit 21 ký tự, bấm Save & Unpublish", () -> {
+        act("Unit 21 ký tự rồi bấm Save & Unpublish", () -> {
             form.fillRequired("AutoProd_" + token);
             form.enterUnit("U".repeat(21));
             form.saveAndWait(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Báo lỗi, không tạo sản phẩm", () -> {
+        verify(StepNames.REJECTED_NO_PRODUCT, () -> {
             Assert.assertFalse(form.errorMessages().isEmpty(), "Phải có khối lỗi về độ dài Unit");
-            ProductListPage list = new ProductListPage(driver()).open();
-            list.search(token);
+            ProductListPage list = new ProductListPage();
+            list.searchFor(token);
             Assert.assertTrue(list.rowIndexesContaining(token).isEmpty(), "Không được có sản phẩm mới");
         });
     }
@@ -254,8 +244,8 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Assert: Nhãn ô Unit có dấu *", () ->
-                Assert.assertEquals(form.labelOf("unit"), "Unit *", "Nhãn ô Unit"));
+        verify("Nhãn ô Unit có dấu *", () ->
+                Assert.assertEquals(form.labelOf(FormField.UNIT), "Unit *", "Nhãn ô Unit"));
     }
 
     @Test(groups = {"regression", "product", "auth"}, description = "Bỏ trống Tags vẫn lưu được")
@@ -267,7 +257,7 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Nhập dữ liệu, không nhập Tags, bấm Save & Unpublish", () -> {
+        act("Nhập dữ liệu, không nhập Tags rồi bấm Save & Unpublish", () -> {
             form.enterName(name);
             form.enterUnit("pc");
             form.enterUnitPrice("10");
@@ -275,7 +265,7 @@ public class ProductCreateTest extends ProductTestBase {
             form.saveAndWait(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Thêm thành công", () ->
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
     }
 
@@ -288,19 +278,18 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Chọn Category, Brand, nhập dữ liệu, bấm Save & Unpublish", () -> {
+        ProductListPage list = act("Chọn Category, Brand, nhập dữ liệu rồi bấm Save & Unpublish", () -> {
             form.chooseCategory(CATEGORY);
             form.chooseBrand(BRAND);
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
+            return form.createProduct(name, SaveButton.UNPUBLISH);
         });
-        Allure.step("Assert: Thêm thành công", () ->
-                Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
+        verify(StepNames.CREATED, () ->
+                Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu"));
 
-        Allure.step("Assert: Trang sửa hiện đúng Category, Brand", () -> {
-            ProductEditPage edit = openEditOf(new ProductListPage(driver()), name, name);
-            Assert.assertEquals(edit.selectedOptionText("category_id").replaceFirst("^-+\\s*", ""), CATEGORY, "Category");
-            Assert.assertEquals(edit.selectedOptionText("brand_id"), BRAND, "Brand");
+        verify("Trang sửa hiện đúng Category, Brand", () -> {
+            ProductEditPage edit = openEditOf(list, name, name);
+            Assert.assertEquals(edit.selectedOptionText(FormField.CATEGORY).replaceFirst("^-+\\s*", ""), CATEGORY, "Category");
+            Assert.assertEquals(edit.selectedOptionText(FormField.BRAND), BRAND, "Brand");
         });
     }
 
@@ -312,15 +301,14 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Minimum Purchase Qty 0, bấm Save & Unpublish", () -> {
+        act("Minimum Purchase Qty 0 rồi bấm Save & Unpublish", () -> {
             form.fillRequired("AutoProd_" + newToken("TC032"));
-            form.enterField("min_qty", "0");
-            form.markPage();
+            form.enterField(FormField.MIN_QTY, "0");
             form.clickSave(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Minimum Purchase Qty", () -> {
-            Assert.assertFalse(form.validationMessageOf("min_qty").isEmpty(), "Phải có bong bóng nhắc");
+        verify("Trình duyệt chặn ở ô Minimum Purchase Qty", () -> {
+            Assert.assertFalse(form.validationMessageOf(FormField.MIN_QTY).isEmpty(), "Phải có bong bóng nhắc");
             Assert.assertTrue(form.isSamePageInstance(), "Không được gửi form");
         });
     }
@@ -335,14 +323,11 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Tạo sản phẩm tên tiếng Việt", () -> {
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
-        });
+        ProductListPage list = act("Tạo sản phẩm tên tiếng Việt", () -> form.createProduct(name, SaveButton.UNPUBLISH));
 
-        Allure.step("Assert: Thêm thành công, tên đúng như đã nhập", () -> {
-            Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
-            Assert.assertTrue(findRow(new ProductListPage(driver()), token, name) >= 0, "Danh sách phải có " + name);
+        verify("Thêm thành công, tên đúng như đã nhập", () -> {
+            Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
+            Assert.assertTrue(list.findRow(token, name) >= 0, "Danh sách phải có " + name);
         });
     }
 
@@ -355,21 +340,18 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         createProduct(name);
 
-        Allure.step("Act: Tạo lần nữa cùng Name", () -> {
-            ProductCreatePage form = new ProductCreatePage(driver()).open();
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
-            Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Lần 2 không được báo trùng");
+        ProductListPage list = act("Tạo lần nữa cùng Name", () -> {
+            ProductListPage created = new ProductCreatePage().open().createProduct(name, SaveButton.UNPUBLISH);
+            Assert.assertEquals(created.getNotifyMessage(), INSERTED, "Lần 2 không được báo trùng");
+            return created;
         });
 
-        Allure.step("Assert: Hai Slug khác nhau", () -> {
-            ProductListPage list = new ProductListPage(driver()).open();
-            list.search(name);
+        verify("Hai Slug khác nhau", () -> {
+            list.searchFor(name);
             Assert.assertEquals(list.rowIndexesContaining(name).size(), 2, "Phải có 2 sản phẩm cùng tên");
-            String first = list.editRow(0).fieldValue("slug");
-            list.open();
-            list.search(name);
-            String second = list.editRow(1).fieldValue("slug");
+            String first = list.editRow(0).fieldValue(FormField.SLUG);
+            list.searchFor(name);
+            String second = list.editRow(1).fieldValue(FormField.SLUG);
             Assert.assertNotEquals(first, second, "Slug hai sản phẩm phải khác nhau");
         });
     }
@@ -391,7 +373,7 @@ public class ProductCreateTest extends ProductTestBase {
         ProductCreatePage form = openCreateForm();
         String[] chosenFile = {""};
 
-        Allure.step("Act: Nhập dữ liệu, gắn " + kind + ", bấm Save & Unpublish", () -> {
+        act("Nhập dữ liệu, gắn " + kind + ", bấm Save & Unpublish", () -> {
             form.fillRequired(name);
             if ("thumbnail".equals(kind)) {
                 MediaLibraryModal library = form.openThumbnailLibrary();
@@ -402,20 +384,20 @@ public class ProductCreateTest extends ProductTestBase {
                 Assert.assertEquals(form.thumbnailPreviewCount(), 1, "Khung xem trước phải có 1 ảnh");
                 Assert.assertEquals(form.thumbnailPreviewTitle(), chosenFile[0], "Khung xem trước phải là ảnh vừa chọn");
             } else {
-                form.enterField("video_link", videoLink);
+                form.enterField(FormField.VIDEO_LINK, videoLink);
             }
             form.saveAndWait(SaveButton.UNPUBLISH);
             Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
         });
 
-        Allure.step("Assert: Trang sửa hiện đúng " + kind, () -> {
-            ProductEditPage edit = openEditOf(new ProductListPage(driver()), name, name);
+        verify("Trang sửa hiện đúng " + kind, () -> {
+            ProductEditPage edit = openEditOf(new ProductListPage(), name, name);
             if ("thumbnail".equals(kind)) {
                 Assert.assertEquals(edit.thumbnailPreviewCount(), 1, "Ô Thumbnail Image phải có 1 ảnh");
                 Assert.assertEquals(edit.thumbnailPreviewTitle(), chosenFile[0], "Ô Thumbnail Image phải là đúng ảnh đã chọn");
             } else {
-                Assert.assertEquals(edit.selectedOptionText("video_provider"), "Youtube", "Video Provider");
-                Assert.assertEquals(edit.fieldValue("video_link"), videoLink, "Video Link");
+                Assert.assertEquals(edit.selectedOptionText(FormField.VIDEO_PROVIDER), "Youtube", "Video Provider");
+                Assert.assertEquals(edit.fieldValue(FormField.VIDEO_LINK), videoLink, "Video Link");
             }
         });
     }
@@ -429,15 +411,15 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Nhập dữ liệu, nhấp đúp Save & Unpublish", () -> {
+        act("Nhập dữ liệu, nhấp đúp Save & Unpublish", () -> {
             form.fillRequired(name);
             form.doubleClickSave(SaveButton.UNPUBLISH);
         });
 
-        Allure.step("Assert: Không trang lỗi, đúng 1 dòng", () -> {
+        verify("Không trang lỗi, đúng 1 dòng", () -> {
             Assert.assertFalse(form.isServerErrorPage(), "Không được ra trang lỗi");
-            ProductListPage list = new ProductListPage(driver()).open();
-            list.search(name);
+            ProductListPage list = new ProductListPage();
+            list.searchFor(name);
             Assert.assertEquals(list.rowIndexesContaining(name).size(), 1, "Không được tạo trùng sản phẩm");
         });
     }
@@ -459,22 +441,18 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Tạo sản phẩm với Name chứa mã", () -> {
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
-        });
-        Allure.step("Assert: Thêm thành công, không trang lỗi", () -> {
-            Assert.assertFalse(form.isServerErrorPage(), "Không được ra trang lỗi");
-            Assert.assertEquals(form.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
+        ProductListPage list = act("Tạo sản phẩm với Name chứa mã", () -> form.createProduct(name, SaveButton.UNPUBLISH));
+        verify("Thêm thành công, không trang lỗi", () -> {
+            Assert.assertFalse(list.isServerErrorPage(), "Không được ra trang lỗi");
+            Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi lưu");
         });
 
-        ProductListPage list = new ProductListPage(driver());
-        Allure.step("Assert: Danh sách — không hộp thoại, tên nguyên văn", () -> {
-            int row = findRow(list, token, name);
+        verify(StepNames.LIST_NAME_AS_TEXT, () -> {
+            int row = list.findRow(token, name);
             Assert.assertFalse(list.isAlertOpen(), "Không được bật hộp thoại ở danh sách");
             Assert.assertTrue(row >= 0, "Danh sách phải hiện nguyên văn " + name + ", thực tế " + list.names());
         });
-        Allure.step("Assert: Trang sửa — không hộp thoại, tên nguyên văn", () -> {
+        verify(StepNames.EDIT_NAME_AS_TEXT, () -> {
             ProductEditPage edit = list.editRow(list.rowIndexOf(name));
             Assert.assertFalse(edit.isAlertOpen(), "Không được bật hộp thoại ở trang sửa");
             Assert.assertEquals(edit.nameValue(), name, "Ô Name");
@@ -491,14 +469,10 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        Allure.step("Act: Tạo sản phẩm tên có emoji", () -> {
-            form.fillRequired(name);
-            form.saveAndWait(SaveButton.UNPUBLISH);
-        });
+        ProductListPage list = act("Tạo sản phẩm tên có emoji", () -> form.createProduct(name, SaveButton.UNPUBLISH));
 
-        Allure.step("Assert: Danh sách hiện đúng emoji", () -> {
-            ProductListPage list = new ProductListPage(driver()).open();
-            list.search(token);
+        verify(StepNames.LIST_SHOWS_EMOJI, () -> {
+            list.searchFor(token);
             Assert.assertEquals(list.names(), List.of(name), "Tên ở danh sách");
         });
     }
@@ -512,11 +486,11 @@ public class ProductCreateTest extends ProductTestBase {
         loginAsAdmin();
         ProductCreatePage form = openCreateForm();
 
-        List<String> sequence = Allure.step("Act: Từ ô Product Name nhấn Tab 4 lần", () -> form.tabSequenceFromName(4));
+        List<String> sequence = act("Từ ô Product Name nhấn Tab 4 lần", () -> form.tabSequenceFromName(4));
 
-        Allure.step("Assert: Focus đi lần lượt Category → Brand → Unit → Weight, có viền khi focus", () -> {
+        verify("Focus đi lần lượt Category → Brand → Unit → Weight, có viền khi focus", () -> {
             Allure.parameter("Thứ tự focus", String.join(" → ", sequence));
-            Assert.assertEquals(sequence, List.of("category_id", "brand_id", "unit", "weight"), "Thứ tự focus sau ô Product Name");
+            Assert.assertEquals(sequence, FormField.names(FormField.CATEGORY, FormField.BRAND, FormField.UNIT, FormField.WEIGHT), "Thứ tự focus sau ô Product Name");
             Assert.assertEquals(form.fieldsWithoutVisibleFocus(), List.of(), "Ô không đổi gì khi được focus");
         });
     }

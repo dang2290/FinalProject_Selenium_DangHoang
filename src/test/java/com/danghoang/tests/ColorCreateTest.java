@@ -1,5 +1,6 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
 import com.danghoang.pages.ColorEditPage;
 import com.danghoang.pages.ColorListPage;
 import com.danghoang.utils.TestDataGenerator;
@@ -31,9 +32,9 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Col_" + newToken("TC004");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Color Code rồi bấm Save", () -> list.createColor(name, newCode()));
+        act("Nhập Name, Color Code rồi bấm Save", () -> list.createColor(name, newCode()));
 
-        Allure.step("Assert: Tạo thành công, form rỗng, màu mới ở đầu bảng", () -> {
+        verify("Tạo thành công, form rỗng, màu mới ở đầu bảng", () -> {
             Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save");
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/colors", "Vẫn ở danh sách");
             Assert.assertEquals(list.nameValue(), "", "Ô Name phải rỗng");
@@ -50,13 +51,12 @@ public class ColorCreateTest extends ColorTestBase {
         tc("AEC_COLOR_TC_013", "regression", "colors", "auth", "validation");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Để trống Name, nhập Color Code, bấm Save", () -> {
+        act("Để trống Name, nhập Color Code rồi bấm Save", () -> {
             list.enterCode(newCode());
-            list.markPage();
             list.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name", () -> {
+        verify(StepNames.NAME_BLOCKED, () -> {
             Assert.assertFalse(list.nameValidationMessage().isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(list.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(list.isNameFocused(), "Con trỏ phải nằm trong ô Name");
@@ -71,17 +71,16 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Col_" + newToken("TC014");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, để trống Color Code, bấm Save", () -> {
+        act("Nhập Name, để trống Color Code rồi bấm Save", () -> {
             list.enterName(name);
-            list.markPage();
             list.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Color Code, không có màu mới", () -> {
+        verify("Trình duyệt chặn ở ô Color Code, không có màu mới", () -> {
             Assert.assertFalse(list.codeValidationMessage().isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(list.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(list.isCodeFocused(), "Con trỏ phải nằm trong ô Color Code");
-            Assert.assertEquals(findRow(list, name, name), -1, "Không được có màu mang Name vừa nhập");
+            Assert.assertEquals(list.findRow(name), -1, "Không được có màu mang Name vừa nhập");
         });
     }
 
@@ -102,13 +101,13 @@ public class ColorCreateTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + length + " ký tự");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Name " + length + " ký tự", () -> list.createColor(name, code));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Name " + length + " ký tự", () -> list.createColor(name, code));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Trang sửa hiện đúng Name", () -> {
+        verify("Trang sửa hiện đúng Name", () -> {
             ColorEditPage edit = length == 1
-                    ? new ColorEditPage(driver()).openById(idOfNewColor(list, name, code))
+                    ? new ColorEditPage().openById(idOfNewColor(list, name, code))
                     : openEditOf(list, name);
             Assert.assertEquals(edit.nameValue(), name, "Ô Name");
         });
@@ -130,15 +129,11 @@ public class ColorCreateTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + length + " ký tự");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name " + length + " ký tự, Color Code, bấm Save", () -> {
-            list.enterName(name);
-            list.enterCode(newCode());
-            list.saveAndWait();
-        });
+        act("Nhập Name " + length + " ký tự, Color Code, bấm Save", () -> list.createColor(name, newCode()));
 
-        Allure.step("Assert: Báo lỗi, không có màu mới", () -> {
+        verify("Báo lỗi, không có màu mới", () -> {
             Assert.assertFalse(list.errorMessages().isEmpty(), "Phải có khối lỗi về độ dài Name");
-            Assert.assertTrue(findRow(list, token, name) < 0 && list.rowIndexesContaining(token).isEmpty(),
+            Assert.assertTrue(list.findRow(token, name) < 0 && list.rowIndexesContaining(token).isEmpty(),
                     "Không được có màu mới, thực tế " + list.names());
         });
     }
@@ -151,13 +146,9 @@ public class ColorCreateTest extends ColorTestBase {
         String code = newCode();
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name toàn khoảng trắng, Color Code, bấm Save", () -> {
-            list.enterName("   ");
-            list.enterCode(code);
-            list.saveAndWait();
-        });
+        act("Nhập Name toàn khoảng trắng, Color Code rồi bấm Save", () -> list.createColor("   ", code));
 
-        Allure.step("Assert: Khối đỏ báo Name bắt buộc, Color Code giữ nguyên", () -> {
+        verify("Khối đỏ báo Name bắt buộc, Color Code giữ nguyên", () -> {
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/colors", "Vẫn ở danh sách");
             Assert.assertEquals(list.errorMessages(), List.of(NAME_REQUIRED), "Khối lỗi");
             Assert.assertEquals(list.codeValue(), code, "Ô Color Code giữ mã đã nhập");
@@ -172,12 +163,12 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Trim_" + newToken("TC018");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Name có khoảng trắng đầu và cuối", () -> list.createColor("   " + name + "   ", newCode()));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Name có khoảng trắng đầu và cuối", () -> list.createColor("   " + name + "   ", newCode()));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Danh sách và trang sửa hiện tên đã bỏ khoảng trắng", () -> {
-            Assert.assertTrue(findRow(list, name, name) >= 0, "Danh sách phải có " + name + ", thực tế " + list.names());
+        verify("Danh sách và trang sửa hiện tên đã bỏ khoảng trắng", () -> {
+            Assert.assertTrue(list.findRow(name) >= 0, "Danh sách phải có " + name + ", thực tế " + list.names());
             Assert.assertEquals(list.editRow(list.rowIndexOf(name)).nameValue(), name, "Ô Name");
         });
     }
@@ -191,11 +182,11 @@ public class ColorCreateTest extends ColorTestBase {
         String code = newCode();
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Color Code có khoảng trắng đầu và cuối", () -> list.createColor(name, "  " + code + "  "));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Color Code có khoảng trắng đầu và cuối", () -> list.createColor(name, "  " + code + "  "));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Trang sửa hiện mã đã bỏ khoảng trắng", () ->
+        verify("Trang sửa hiện mã đã bỏ khoảng trắng", () ->
                 Assert.assertEquals(openEditOf(list, name).codeValue(), code, "Ô Color Code"));
     }
 
@@ -209,12 +200,12 @@ public class ColorCreateTest extends ColorTestBase {
         String expected = typed.replace(" ", "");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Name " + typed, () -> list.createColor(typed, newCode()));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Name " + typed, () -> list.createColor(typed, newCode()));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Danh sách hiện " + expected, () ->
-                Assert.assertTrue(findRow(list, token, expected) >= 0, "Danh sách phải có " + expected + ", thực tế " + list.names()));
+        verify("Danh sách hiện " + expected, () ->
+                Assert.assertTrue(list.findRow(token, expected) >= 0, "Danh sách phải có " + expected + ", thực tế " + list.names()));
     }
 
     @Test(groups = {"regression", "colors", "auth"}, description = "Tạo được hai màu trùng tên, khác mã")
@@ -226,11 +217,11 @@ public class ColorCreateTest extends ColorTestBase {
         ColorListPage list = openColorsAsAdmin();
         createColor(list, name, newCode());
 
-        Allure.step("Act: Tạo thêm màu cùng Name, mã khác", () -> list.createColor(name, newCode()));
-        Allure.step("Assert: Tạo thành công, không báo trùng", () ->
+        act("Tạo thêm màu cùng Name, mã khác", () -> list.createColor(name, newCode()));
+        verify("Tạo thành công, không báo trùng", () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Tìm Name ra đúng 2 dòng", () -> {
+        verify("Tìm Name ra đúng 2 dòng", () -> {
             list.search(name);
             Assert.assertEquals(list.names(), List.of(name, name), "Kết quả tìm");
         });
@@ -245,12 +236,12 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "MàuĐỏ_" + token;
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Name " + name, () -> list.createColor(name, newCode()));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Name " + name, () -> list.createColor(name, newCode()));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Danh sách và trang sửa hiện đúng tên", () -> {
-            int row = findRow(list, token, name);
+        verify("Danh sách và trang sửa hiện đúng tên", () -> {
+            int row = list.findRow(token, name);
             Assert.assertTrue(row >= 0, "Danh sách phải có " + name + ", thực tế " + list.names());
             Assert.assertEquals(list.editRow(row).nameValue(), name, "Ô Name");
         });
@@ -264,16 +255,12 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Col_" + newToken("TC023");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Color Code toàn khoảng trắng, bấm Save", () -> {
-            list.enterName(name);
-            list.enterCode("   ");
-            list.saveAndWait();
-        });
+        act("Nhập Name, Color Code toàn khoảng trắng rồi bấm Save", () -> list.createColor(name, "   "));
 
-        Allure.step("Assert: Khối đỏ báo Color Code bắt buộc, Name giữ nguyên, không có màu mới", () -> {
+        verify("Khối đỏ báo Color Code bắt buộc, Name giữ nguyên, không có màu mới", () -> {
             Assert.assertEquals(list.errorMessages(), List.of(CODE_REQUIRED), "Khối lỗi");
             Assert.assertEquals(list.nameValue(), name, "Ô Name giữ tên đã nhập");
-            Assert.assertEquals(findRow(list, name, name), -1, "Không được có màu mới");
+            Assert.assertEquals(list.findRow(name), -1, "Không được có màu mới");
         });
     }
 
@@ -296,17 +283,13 @@ public class ColorCreateTest extends ColorTestBase {
         ColorListPage list = openColorsAsAdmin();
         createColor(list, "Col_" + token, existingCode);
 
-        Allure.step("Act: Nhập Name mới, Color Code " + typedCode + ", bấm Save", () -> {
-            list.enterName(newName);
-            list.enterCode(typedCode);
-            list.saveAndWait();
-        });
+        act("Nhập Name mới, Color Code " + typedCode + ", bấm Save", () -> list.createColor(newName, typedCode));
 
-        Allure.step("Assert: Khối đỏ báo mã đã dùng, hai ô giữ dữ liệu, không có màu mới", () -> {
+        verify("Khối đỏ báo mã đã dùng, hai ô giữ dữ liệu, không có màu mới", () -> {
             Assert.assertEquals(list.errorMessages(), List.of(CODE_TAKEN), "Khối lỗi");
             Assert.assertEquals(list.nameValue(), newName, "Ô Name");
             Assert.assertEquals(list.codeValue(), typedCode, "Ô Color Code");
-            Assert.assertEquals(findRow(list, newName, newName), -1, "Không được có màu mới");
+            Assert.assertEquals(list.findRow(newName), -1, "Không được có màu mới");
         });
     }
 
@@ -320,11 +303,11 @@ public class ColorCreateTest extends ColorTestBase {
         String code = TestDataGenerator.padTo("#" + randomHex(9), 'a', 255);
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Color Code 255 ký tự", () -> list.createColor(name, code));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Color Code 255 ký tự", () -> list.createColor(name, code));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Trang sửa hiện đủ 255 ký tự", () ->
+        verify("Trang sửa hiện đủ 255 ký tự", () ->
                 Assert.assertEquals(openEditOf(list, name).codeValue(), code, "Ô Color Code"));
     }
 
@@ -337,15 +320,11 @@ public class ColorCreateTest extends ColorTestBase {
         String code = TestDataGenerator.padTo("#" + randomHex(9), 'a', 256);
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Color Code 256 ký tự, bấm Save", () -> {
-            list.enterName(name);
-            list.enterCode(code);
-            list.saveAndWait();
-        });
+        act("Nhập Name, Color Code 256 ký tự rồi bấm Save", () -> list.createColor(name, code));
 
-        Allure.step("Assert: Khối đỏ báo mã quá dài, không có màu mới", () -> {
+        verify("Khối đỏ báo mã quá dài, không có màu mới", () -> {
             Assert.assertEquals(list.errorMessages(), List.of(CODE_TOO_LONG), "Khối lỗi");
-            Assert.assertEquals(findRow(list, name, name), -1, "Không được có màu mới");
+            Assert.assertEquals(list.findRow(name), -1, "Không được có màu mới");
         });
     }
 
@@ -364,7 +343,7 @@ public class ColorCreateTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + kind);
         ColorListPage list = openColorsAsAdmin();
 
-        String code = Allure.step("Act: Tạo màu với mã " + kind, () -> {
+        String code = act("Tạo màu với mã " + kind, () -> {
             for (int attempt = 0; attempt < 5; attempt++) {
                 String candidate = "short".equals(kind) ? "#" + randomHex(3) : newCode().toUpperCase();
                 list.open();
@@ -375,10 +354,10 @@ public class ColorCreateTest extends ColorTestBase {
             }
             throw new AssertionError("5 mã thử đều đã có người dùng");
         });
-        Allure.step("Assert: Tạo thành công", () ->
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Trang sửa hiện đúng mã " + code, () ->
+        verify("Trang sửa hiện đúng mã " + code, () ->
                 Assert.assertEquals(openEditOf(list, name).codeValue(), code, "Ô Color Code"));
     }
 
@@ -397,15 +376,11 @@ public class ColorCreateTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + code);
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Color Code " + code + ", bấm Save", () -> {
-            list.enterName(name);
-            list.enterCode(code);
-            list.saveAndWait();
-        });
+        act("Nhập Name, Color Code " + code + ", bấm Save", () -> list.createColor(name, code));
 
-        Allure.step("Assert: Báo lỗi định dạng, không có màu mới", () -> {
+        verify("Báo lỗi định dạng, không có màu mới", () -> {
             Assert.assertFalse(list.errorMessages().isEmpty(), "Phải có khối lỗi về định dạng mã màu");
-            Assert.assertEquals(findRow(list, name, name), -1, "Không được có màu mới");
+            Assert.assertEquals(list.findRow(name), -1, "Không được có màu mới");
         });
     }
 
@@ -417,16 +392,15 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Dbl_" + newToken("TC041");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Color Code rồi bấm đúp Save", () -> {
+        act("Nhập Name, Color Code rồi bấm đúp Save", () -> {
             list.enterName(name);
             list.enterCode(newCode());
             list.doubleClickSave();
         });
 
-        Allure.step("Assert: Không trang lỗi, đúng 1 dòng mang Name", () -> {
+        verify("Không trang lỗi, đúng 1 dòng mang Name", () -> {
             Assert.assertFalse(list.isServerErrorPage(), "Không được ra trang lỗi");
-            list.open();
-            list.search(name);
+            list.searchFor(name);
             Assert.assertEquals(list.rowIndexesContaining(name).size(), 1, "Không được tạo trùng màu");
         });
     }
@@ -449,25 +423,25 @@ public class ColorCreateTest extends ColorTestBase {
         Allure.parameter("Biến thể", variant + " — " + name);
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Name chứa mã", () -> list.createColor(name, code));
-        Allure.step("Assert: Tạo thành công, không trang lỗi", () -> {
+        act("Tạo màu với Name chứa mã", () -> list.createColor(name, code));
+        verify("Tạo thành công, không trang lỗi", () -> {
             Assert.assertFalse(list.isServerErrorPage(), "Không được ra trang lỗi");
             Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save");
         });
 
-        Allure.step("Assert: Danh sách — không hộp thoại, tên nguyên văn", () -> {
+        verify(StepNames.LIST_NAME_AS_TEXT, () -> {
             Assert.assertFalse(list.isAlertOpen(), "Không được bật hộp thoại ở danh sách");
             Assert.assertTrue(list.rowIndexOf(name) >= 0, "Danh sách phải hiện nguyên văn " + name + ", thực tế " + list.names());
         });
-        Allure.step("Assert: Trang sửa — không hộp thoại, tên nguyên văn", () -> {
+        verify(StepNames.EDIT_NAME_AS_TEXT, () -> {
             ColorEditPage edit;
             if (traceable) {
                 // Tìm theo mã truy vết, không theo cả tên — chuỗi có thẻ HTML dễ bị tường lửa chặn ở ô tìm
-                int row = findRow(list, token, name);
+                int row = list.findRow(token, name);
                 Assert.assertTrue(row >= 0, "Phải tìm thấy màu test " + name);
                 edit = list.editRow(row);
             } else {
-                edit = new ColorEditPage(driver()).openById(idOfNewColor(list, name, code));
+                edit = new ColorEditPage().openById(idOfNewColor(list, name, code));
             }
             Assert.assertFalse(edit.isAlertOpen(), "Không được bật hộp thoại ở trang sửa");
             Assert.assertEquals(edit.nameValue(), name, "Ô Name");
@@ -483,11 +457,11 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Màu🎨" + token;
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Tạo màu với Name có emoji", () -> list.createColor(name, newCode()));
-        Allure.step("Assert: Tạo thành công", () ->
+        act("Tạo màu với Name có emoji", () -> list.createColor(name, newCode()));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi Save"));
 
-        Allure.step("Assert: Danh sách hiện đúng emoji", () -> {
+        verify(StepNames.LIST_SHOWS_EMOJI, () -> {
             list.search(token);
             Assert.assertEquals(list.names(), List.of(name), "Tên ở danh sách");
         });
@@ -502,9 +476,9 @@ public class ColorCreateTest extends ColorTestBase {
         String name = "Kb_" + newToken("TC048a");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Act: Nhập Name, Color Code rồi nhấn Enter", () -> list.createByEnterInCode(name, newCode()));
+        act("Nhập Name, Color Code rồi nhấn Enter", () -> list.createByEnterInCode(name, newCode()));
 
-        Allure.step("Assert: Tạo thành công, màu mới ở đầu bảng", () -> {
+        verify("Tạo thành công, màu mới ở đầu bảng", () -> {
             Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi nhấn Enter");
             int row = list.rowIndexOf(name);
             Assert.assertTrue(row >= 0 && row < TOP_ROWS, "Màu mới phải ở đầu bảng, thực tế dòng " + (row + 1));
@@ -519,9 +493,9 @@ public class ColorCreateTest extends ColorTestBase {
         Allure.parameter("Biến thể", "b — Tab");
         ColorListPage list = openColorsAsAdmin();
 
-        Allure.step("Assert: Tab từ ô Name tới Color Code rồi Save", () ->
+        verify("Tab từ ô Name tới Color Code rồi bấm Save", () ->
                 Assert.assertEquals(list.tabSequenceFromName(2), List.of("code", "Save"), "Phần tử nhận focus sau mỗi lần Tab"));
-        Allure.step("Assert: Ô Name, Color Code và nút Save có viền khi được focus", () -> {
+        verify("Ô Name, Color Code và nút Save có viền khi được focus", () -> {
             Assert.assertEquals(list.fieldsWithoutVisibleFocus(), List.of(), "Ô không đổi gì khi được focus");
             Assert.assertTrue(list.saveShowsFocusWhenTabbed(), "Nút Save phải đổi kiểu khi được focus bằng Tab");
         });

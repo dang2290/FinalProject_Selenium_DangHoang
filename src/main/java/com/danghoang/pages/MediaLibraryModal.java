@@ -1,14 +1,11 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
-import org.openqa.selenium.TimeoutException;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Actions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.Select;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -36,128 +33,113 @@ public class MediaLibraryModal extends BasePage {
     /** Cách đóng hộp thư viện. */
     public enum CloseBy { CLOSE_ICON, ESC }
 
-    public MediaLibraryModal(WebDriver driver) {
-        super(driver);
-    }
-
     public MediaLibraryModal waitUntilOpen() {
-        waitForVisible(MODAL);
-        wait.until(d -> !d.findElements(FILES).isEmpty());
+        WebUI.waitForElementVisible(MODAL);
+        WebUI.waitUntil("lưới tệp có ảnh", () -> WebUI.checkElementExist(FILES));
         return this;
     }
 
     public List<String> tabs() {
-        return texts(TABS);
+        return WebUI.getAllElementsText(TABS);
     }
 
     public String activeTab() {
-        return getText(ACTIVE_TAB);
+        return WebUI.getElementText(ACTIVE_TAB);
     }
 
     public String selectedSort() {
-        return new Select(driver.findElement(SORT_SELECT)).getFirstSelectedOption().getText().trim();
+        return WebUI.getSelectedOptionText(SORT_SELECT);
     }
 
     /** Các lựa chọn sắp xếp theo thứ tự trong dropdown. */
     public List<String> sortOptions() {
-        return new Select(driver.findElement(SORT_SELECT)).getOptions().stream()
-                .map(o -> o.getAttribute("textContent").trim()).toList();
+        return WebUI.getAllOptionsText(SORT_SELECT);
     }
 
     public boolean isSelectedOnlyChecked() {
-        return driver.findElement(SELECTED_ONLY).isSelected();
+        return WebUI.isElementSelected(SELECTED_ONLY);
     }
 
     public String searchValue() {
-        return driver.findElement(SEARCH_INPUT).getAttribute("value");
+        return WebUI.getElementValue(SEARCH_INPUT);
     }
 
     public String searchPlaceholder() {
-        return driver.findElement(SEARCH_INPUT).getAttribute("placeholder");
+        return WebUI.getElementAttribute(SEARCH_INPUT, "placeholder");
     }
 
     /** Mọi ảnh trong lưới đều có tên tệp và dung lượng. */
     public boolean everyFileHasNameAndSize() {
-        List<WebElement> files = driver.findElements(FILES);
+        List<WebElement> files = WebUI.getWebElements(FILES);
         return !files.isEmpty() && files.stream().allMatch(f ->
-                !f.findElement(FILE_CARD).getAttribute("title").isBlank()
-                        && f.findElement(FILE_SIZE).getText().trim().matches("[\\d.,]+\\s*[KMG]?B"));
+                !WebUI.getWebElement(f, FILE_CARD).getAttribute("title").isBlank()
+                        && WebUI.getWebElement(f, FILE_SIZE).getText().trim().matches("[\\d.,]+\\s*[KMG]?B"));
     }
 
     public String selectedCountText() {
-        return getText(SELECTED_COUNT);
+        return WebUI.getElementText(SELECTED_COUNT);
     }
 
     public List<String> footerButtons() {
-        return List.of(getText(CLEAR_BUTTON), getText(PREV_BUTTON), getText(NEXT_BUTTON), getText(ADD_FILES_BUTTON));
+        return List.of(WebUI.getElementText(CLEAR_BUTTON), WebUI.getElementText(PREV_BUTTON), WebUI.getElementText(NEXT_BUTTON), WebUI.getElementText(ADD_FILES_BUTTON));
     }
 
     public boolean hasCloseIcon() {
-        return isPresentNow(CLOSE_BUTTON);
+        return WebUI.isElementDisplayedNow(CLOSE_BUTTON);
     }
 
     /** Lọc thư viện — ô tìm chỉ lọc sau khi nhấn Enter. */
     @Step("Lọc thư viện theo {keyword}")
     public void search(String keyword) {
-        WebElement input = waitForVisible(SEARCH_INPUT);
-        input.clear();
-        input.sendKeys(keyword, Keys.ENTER);
-        wait.until(d -> {
-            List<WebElement> files = d.findElements(FILES);
+        WebUI.setTextAndKey(SEARCH_INPUT, keyword, Keys.ENTER);
+        WebUI.waitUntil("thư viện lọc theo " + keyword, () -> {
+            List<WebElement> files = WebUI.getWebElements(FILES);
             return !files.isEmpty() && files.stream().allMatch(f ->
-                    f.findElement(FILE_CARD).getAttribute("title").toLowerCase().contains(keyword.toLowerCase()));
+                    WebUI.getWebElement(f, FILE_CARD).getAttribute("title").toLowerCase().contains(keyword.toLowerCase()));
         });
     }
 
     @Step("Bấm ảnh thứ {index} trong lưới (đếm từ 0)")
     public void selectFile(int index) {
         // Lưới vẽ lại sau khi lọc / Clear — chờ có đủ ảnh rồi mới bấm
-        wait.until(d -> d.findElements(FILES).size() > index);
-        driver.findElements(FILES).get(index).findElement(FILE_CARD).click();
-        wait.until(d -> "true".equals(d.findElements(FILES).get(index).getAttribute("data-selected")));
+        WebUI.waitUntil("lưới có ảnh thứ " + index, () -> WebUI.getElementCount(FILES) > index);
+        WebUI.clickElement(WebUI.getWebElement(WebUI.getWebElements(FILES).get(index), FILE_CARD), "ảnh thứ " + index);
+        WebUI.waitUntil("ảnh được đánh dấu chọn", () -> "true".equals(WebUI.getWebElements(FILES).get(index).getAttribute("data-selected")));
     }
 
     /** Vị trí (từ 0) các ảnh đang được đánh dấu chọn. */
     public List<Integer> selectedIndexes() {
-        List<WebElement> files = driver.findElements(FILES);
+        List<WebElement> files = WebUI.getWebElements(FILES);
         return IntStream.range(0, files.size())
                 .filter(i -> "true".equals(files.get(i).getAttribute("data-selected"))).boxed().toList();
     }
 
     public String fileNameAt(int index) {
-        return driver.findElements(FILES).get(index).findElement(FILE_CARD).getAttribute("title");
+        return WebUI.getWebElement(WebUI.getWebElements(FILES).get(index), FILE_CARD).getAttribute("title");
     }
 
     @Step("Bấm Clear")
     public void clearSelection() {
-        click(CLEAR_BUTTON);
-        wait.until(d -> d.findElements(SELECTED_FILES).isEmpty());
+        WebUI.clickElement(CLEAR_BUTTON);
+        WebUI.waitUntil("bỏ chọn hết ảnh", () -> !WebUI.checkElementExist(SELECTED_FILES));
     }
 
     @Step("Bấm Add Files")
     public void addFiles() {
-        click(ADD_FILES_BUTTON);
+        WebUI.clickElement(ADD_FILES_BUTTON);
         waitUntilClosed();
     }
 
     @Step("Đóng hộp thư viện bằng {how}")
     public void close(CloseBy how) {
         switch (how) {
-            case CLOSE_ICON -> click(CLOSE_BUTTON);
-            case ESC -> new Actions(driver).sendKeys(Keys.ESCAPE).perform();
+            case CLOSE_ICON -> WebUI.clickElement(CLOSE_BUTTON);
+            case ESC -> WebUI.pressKey(Keys.ESCAPE);
         }
     }
 
     /** Chờ hộp đóng; hết thời gian chờ mà vẫn mở thì trả false. */
     public boolean waitUntilClosed() {
-        try {
-            return wait.until(ExpectedConditions.invisibilityOfElementLocated(MODAL));
-        } catch (TimeoutException e) {
-            return false;
-        }
-    }
-
-    private List<String> texts(By locator) {
-        return driver.findElements(locator).stream().map(e -> e.getText().trim()).toList();
+        return WebUI.waitUntilElementGone(MODAL);
     }
 }

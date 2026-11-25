@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.ColorEditPage;
 import com.danghoang.pages.ColorListPage;
 import com.danghoang.pages.DashboardPage;
@@ -31,9 +33,9 @@ public class ColorEditTest extends ColorTestBase {
         ColorListPage list = openColorsAsAdmin();
         createColor(list, name, code);
 
-        ColorEditPage edit = Allure.step("Act: Tìm màu test, bấm nút Edit", () -> openEditOf(list, name));
+        ColorEditPage edit = act("Tìm màu test, bấm Edit", () -> openEditOf(list, name));
 
-        Allure.step("Assert: Bảng kiểm trang sửa", () -> {
+        verify(StepNames.EDIT_CHECKLIST, () -> {
             Assert.assertTrue(edit.currentUrl().matches(".*/admin/colors/edit/\\d+\\?lang=en$"), "Đường dẫn: " + edit.currentUrl());
             Assert.assertTrue(edit.isTitleDisplayed(), "Tiêu đề Color Information");
             Assert.assertTrue(edit.isColorsMenuActive(), "Mục Colors ở sidebar phải được tô sáng");
@@ -57,21 +59,21 @@ public class ColorEditTest extends ColorTestBase {
         createColor(list, oldName, newCode());
         ColorEditPage edit = openEditOf(list, oldName);
 
-        Allure.step("Act: Đổi Name, Color Code rồi bấm Save", () -> {
+        act("Đổi Name, Color Code rồi bấm Save", () -> {
             edit.enterName(newName);
             edit.enterCode(newCode);
             edit.saveAndWait();
         });
 
-        Allure.step("Assert: Cập nhật thành công, ở lại trang sửa với giá trị mới", () -> {
+        verify("Cập nhật thành công, ở lại trang sửa với giá trị mới", () -> {
             Assert.assertEquals(edit.getNotifyMessage(), UPDATED, "Thông báo sau khi Save");
             Assert.assertTrue(edit.isOnEditPage(), "Phải ở lại trang sửa: " + edit.currentUrl());
             Assert.assertEquals(edit.nameValue(), newName, "Ô Name");
             Assert.assertEquals(edit.codeValue(), newCode, "Ô Color Code");
         });
 
-        Allure.step("Assert: Danh sách có tên mới, không còn tên cũ", () -> {
-            Assert.assertTrue(findRow(list, newName, newName) >= 0, "Phải tìm thấy tên mới");
+        verify("Danh sách có tên mới, không còn tên cũ", () -> {
+            Assert.assertTrue(list.findRow(newName) >= 0, "Phải tìm thấy tên mới");
             list.search(oldName);
             Assert.assertTrue(list.isNothingFoundShown(), "Tìm tên cũ phải ra Nothing found, thực tế " + list.names());
         });
@@ -87,19 +89,18 @@ public class ColorEditTest extends ColorTestBase {
         createColor(list, name, newCode());
         ColorEditPage edit = openEditOf(list, name);
 
-        Allure.step("Act: Xoá hết Name, bấm Save", () -> {
+        act(StepNames.CLEAR_NAME_AND_SAVE, () -> {
             edit.enterName("");
-            edit.markPage();
             edit.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name", () -> {
+        verify(StepNames.NAME_BLOCKED, () -> {
             Assert.assertFalse(edit.nameValidationMessage().isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(edit.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(edit.isNameFocused(), "Con trỏ phải nằm trong ô Name");
         });
-        Allure.step("Assert: Màu test vẫn giữ tên cũ", () ->
-                Assert.assertTrue(findRow(list, name, name) >= 0, "Phải còn màu mang tên cũ"));
+        verify("Màu test vẫn giữ tên cũ", () ->
+                Assert.assertTrue(list.findRow(name) >= 0, "Phải còn màu mang tên cũ"));
     }
 
     @Test(groups = {"regression", "colors", "auth", "validation", "knownIssue"}, description = "Sửa Name thành chỉ có khoảng trắng phải báo lỗi, giữ tên cũ")
@@ -114,14 +115,11 @@ public class ColorEditTest extends ColorTestBase {
         String id = edit.colorId();
         trackColorId(id);
 
-        Allure.step("Act: Thay Name bằng khoảng trắng, bấm Save", () -> {
-            edit.enterName("   ");
-            edit.saveAndWait();
-        });
+        act("Thay Name bằng khoảng trắng rồi bấm Save", () -> edit.saveWithName("   "));
 
-        Allure.step("Assert: Khối đỏ báo Name bắt buộc, không báo cập nhật", () ->
+        verify("Khối đỏ báo Name bắt buộc, không báo cập nhật", () ->
                 Assert.assertEquals(edit.errorMessages(), List.of(NAME_REQUIRED), "Khối lỗi"));
-        Allure.step("Assert: Mở lại trang sửa — Name vẫn là tên cũ", () ->
+        verify("Mở lại trang sửa — Name vẫn là tên cũ", () ->
                 Assert.assertEquals(edit.openById(id).nameValue(), name, "Ô Name"));
     }
 
@@ -147,14 +145,14 @@ public class ColorEditTest extends ColorTestBase {
         ColorEditPage edit = openEditOf(list, nameY);
         String id = edit.colorId();
 
-        Allure.step("Act: Đổi Color Code của màu Y, bấm Save", () -> {
+        act("Đổi Color Code của màu Y rồi bấm Save", () -> {
             edit.enterCode("taken".equals(kind) ? codeX : "   ");
             edit.saveAndWait();
         });
 
-        Allure.step("Assert: Khối đỏ báo lỗi mã", () ->
+        verify("Khối đỏ báo lỗi mã", () ->
                 Assert.assertEquals(edit.errorMessages(), List.of("taken".equals(kind) ? CODE_TAKEN : CODE_REQUIRED), "Khối lỗi"));
-        Allure.step("Assert: Mở lại trang sửa — mã vẫn là mã cũ của Y", () ->
+        verify("Mở lại trang sửa — mã vẫn là mã cũ của Y", () ->
                 Assert.assertEquals(edit.openById(id).codeValue(), codeY, "Ô Color Code"));
     }
 
@@ -169,12 +167,9 @@ public class ColorEditTest extends ColorTestBase {
         createColor(list, "Col_" + token, code);
         ColorEditPage edit = openEditOf(list, "Col_" + token);
 
-        Allure.step("Act: Đổi Name, giữ Color Code, bấm Save", () -> {
-            edit.enterName("ColEd_" + token);
-            edit.saveAndWait();
-        });
+        act("Đổi Name, giữ Color Code rồi bấm Save", () -> edit.saveWithName("ColEd_" + token));
 
-        Allure.step("Assert: Cập nhật thành công, mã giữ nguyên", () -> {
+        verify("Cập nhật thành công, mã giữ nguyên", () -> {
             Assert.assertEquals(edit.getNotifyMessage(), UPDATED, "Thông báo sau khi Save");
             Assert.assertEquals(edit.errorMessages(), List.of(), "Không được có khối lỗi");
             Assert.assertEquals(edit.codeValue(), code, "Ô Color Code");
@@ -194,14 +189,11 @@ public class ColorEditTest extends ColorTestBase {
         ColorEditPage edit = openEditOf(list, name);
         String id = edit.colorId();
 
-        Allure.step("Act: Thay Name bằng chuỗi 31 ký tự, bấm Save", () -> {
-            edit.enterName(TestDataGenerator.padTo(token, 'x', 31));
-            edit.saveAndWait();
-        });
+        act("Thay Name bằng chuỗi 31 ký tự rồi bấm Save", () -> edit.saveWithName(TestDataGenerator.padTo(token, 'x', 31)));
 
-        Allure.step("Assert: Báo lỗi, không báo cập nhật", () ->
+        verify("Báo lỗi, không báo cập nhật", () ->
                 Assert.assertFalse(edit.errorMessages().isEmpty(), "Phải có khối lỗi về độ dài Name"));
-        Allure.step("Assert: Mở lại trang sửa — Name vẫn là tên cũ", () ->
+        verify("Mở lại trang sửa — Name vẫn là tên cũ", () ->
                 Assert.assertEquals(edit.openById(id).nameValue(), name, "Ô Name"));
     }
 
@@ -216,23 +208,15 @@ public class ColorEditTest extends ColorTestBase {
         createColor(list, "Col_" + token, newCode());
         ColorEditPage edit = openEditOf(list, "Col_" + token);
 
-        Allure.step("Act: Thay Name bằng " + typed + ", bấm Save", () -> {
-            edit.enterName(typed);
-            edit.saveAndWait();
-        });
+        act("Thay Name bằng " + typed + ", bấm Save", () -> edit.saveWithName(typed));
 
-        Allure.step("Assert: Cập nhật thành công, dấu cách đã bị xoá", () -> {
+        verify("Cập nhật thành công, dấu cách đã bị xoá", () -> {
             Assert.assertEquals(edit.getNotifyMessage(), UPDATED, "Thông báo sau khi Save");
             Assert.assertEquals(edit.nameValue(), typed.replace(" ", ""), "Ô Name");
         });
     }
 
-    @DataProvider(name = "expiredSessionForms", parallel = true)
-    public Object[][] expiredSessionForms() {
-        return new Object[][]{{"a", "create"}, {"b", "edit"}};
-    }
-
-    @Test(dataProvider = "expiredSessionForms", groups = {"regression", "colors", "auth", "security"},
+    @Test(dataProvider = "expiredSessionForms", dataProviderClass = DataProviderFactory.class, groups = {"regression", "colors", "auth", "security"},
             description = "Hết phiên đăng nhập khi đang nhập thì không lưu")
     @Severity(SeverityLevel.NORMAL)
     @Description("Kiểm tra tab 1 đang nhập ở form Add New Color / trang sửa màu, tab 2 đăng xuất, tab 1 bấm Save thì ra 419 PAGE EXPIRED hoặc về /login; đăng nhập lại thấy dữ liệu không đổi.")
@@ -243,9 +227,9 @@ public class ColorEditTest extends ColorTestBase {
         String originalName = "Col_" + token;
         String typedName = ("create".equals(formType) ? "ColSs_" : "ColEd_") + token;
         ColorListPage list = openColorsAsAdmin();
-        ColorEditPage edit = new ColorEditPage(driver());
+        ColorEditPage edit = new ColorEditPage();
 
-        Allure.step("Arrange: Tab 1 mở form " + formType + ", nhập dữ liệu", () -> {
+        arrange("Tab 1 mở form " + formType + ", nhập dữ liệu", () -> {
             if ("create".equals(formType)) {
                 list.open();
                 list.enterName(typedName);
@@ -257,13 +241,9 @@ public class ColorEditTest extends ColorTestBase {
         });
         String formTab = browser().currentHandle();
 
-        Allure.step("Act: Tab 2 đăng xuất", () -> {
-            browser().openNewTab();
-            new DashboardPage(driver()).open().logout();
-            browser().closeTabAndSwitchTo(formTab);
-        });
+        act(StepNames.TAB2_LOGOUT, () -> new DashboardPage().logoutInNewTab(formTab));
 
-        Allure.step("Act: Tab 1 bấm Save", () -> {
+        act(StepNames.TAB1_SAVE, () -> {
             if ("create".equals(formType)) {
                 list.clickSave();
             } else {
@@ -271,17 +251,17 @@ public class ColorEditTest extends ColorTestBase {
             }
         });
 
-        Allure.step("Assert: 419 PAGE EXPIRED hoặc về /login", () -> {
+        verify(StepNames.SESSION_EXPIRED, () -> {
             edit.waitForPath("/login");
             Assert.assertTrue(edit.isPageExpired() || "/login".equals(edit.currentPath()),
                     "Gửi form sau khi hết phiên phải bị chặn: " + edit.currentUrl());
         });
 
-        Allure.step("Assert: Đăng nhập lại — dữ liệu không đổi", () -> {
+        verify(StepNames.DATA_UNCHANGED, () -> {
             loginAsAdmin();
-            Assert.assertEquals(findRow(list, typedName, typedName), -1, "Không được có màu mang tên vừa nhập");
+            Assert.assertEquals(list.findRow(typedName), -1, "Không được có màu mang tên vừa nhập");
             if (!"create".equals(formType)) {
-                Assert.assertTrue(findRow(list, originalName, originalName) >= 0, "Màu test phải giữ tên cũ");
+                Assert.assertTrue(list.findRow(originalName) >= 0, "Màu test phải giữ tên cũ");
             }
         });
     }

@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.AttributeDetailPage;
 import com.danghoang.pages.AttributeListPage;
 import com.danghoang.pages.AttributeValueEditPage;
@@ -31,9 +33,9 @@ public class AttributeValueTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
 
-        AttributeDetailPage detail = Allure.step("Act: Bấm nút Attribute values", () -> openDetailOf(list, name));
+        AttributeDetailPage detail = act("Bấm nút Attribute values", () -> openDetailOf(list, name));
 
-        Allure.step("Assert: Bảng kiểm trang Attribute Detail", () -> {
+        verify("Bảng kiểm trang Attribute Detail", () -> {
             Assert.assertTrue(detail.currentUrl().matches(".*/admin/attributes/\\d+$"), "Thanh địa chỉ: " + detail.currentUrl());
             Assert.assertTrue(detail.isTitleDisplayed(), "(1) Tiêu đề Attribute Detail");
             Assert.assertEquals(detail.cardHeaders(), List.of(name, "Add New Attribute Value"), "(2)(3) Tiêu đề hai thẻ");
@@ -60,9 +62,9 @@ public class AttributeValueTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
 
-        Allure.step("Act: Nhập giá trị rồi Save", () -> detail.addValue(value));
+        act("Nhập giá trị rồi bấm Save", () -> detail.addValue(value));
 
-        Allure.step("Assert: Thông báo thành công, vẫn ở Attribute Detail, đúng 1 dòng giá trị", () -> {
+        verify("Thông báo thành công, vẫn ở Attribute Detail, đúng 1 dòng giá trị", () -> {
             Assert.assertEquals(detail.getNotifyMessage(), VALUE_INSERTED, "Thông báo sau khi thêm giá trị");
             Assert.assertTrue(detail.isTitleDisplayed(), "Phải vẫn ở trang Attribute Detail");
             Assert.assertEquals(detail.values(), List.of(value), "Bảng giá trị");
@@ -70,8 +72,8 @@ public class AttributeValueTest extends AttributeTestBase {
             Assert.assertEquals(detail.rowButtonTitles(0), List.of("Edit", "Delete"), "Nút ở cột Action");
         });
 
-        Allure.step("Assert: Cột Values ở danh sách hiện nhãn giá trị", () ->
-                Assert.assertEquals(list.valuesOf(findRow(list, name)), List.of(value), "Cột Values"));
+        verify("Cột Values ở danh sách hiện nhãn giá trị", () ->
+                Assert.assertEquals(list.valuesOf(list.findRow(name)), List.of(value), "Cột Values"));
     }
 
     @Test(groups = {"regression", "attribute", "auth", "validation"}, description = "Không thêm được giá trị khi Attribute Value trống")
@@ -84,12 +86,11 @@ public class AttributeValueTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
 
-        Allure.step("Act: Để trống Attribute Value, bấm Save", () -> {
-            detail.markPage();
+        act("Để trống Attribute Value rồi bấm Save", () -> {
             detail.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn, bảng vẫn Nothing found", () -> {
+        verify("Trình duyệt chặn, bảng vẫn Nothing found", () -> {
             Assert.assertFalse(detail.valueValidationMessage().isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(detail.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(detail.isValueFocused(), "Con trỏ phải nằm trong ô Attribute Value");
@@ -109,12 +110,12 @@ public class AttributeValueTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
 
-        Allure.step("Act: Thêm cùng giá trị 2 lần", () -> {
+        act("Thêm cùng giá trị 2 lần", () -> {
             detail.addValue(value);
             detail.addValue(value);
         });
 
-        Allure.step("Assert: Lần 2 báo thành công, bảng có 2 dòng cùng giá trị", () -> {
+        verify("Lần 2 báo thành công, bảng có 2 dòng cùng giá trị", () -> {
             Assert.assertEquals(detail.getNotifyMessage(), VALUE_INSERTED, "Thông báo lần 2");
             Assert.assertEquals(detail.values(), List.of(value, value), "Bảng giá trị");
         });
@@ -130,13 +131,13 @@ public class AttributeValueTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
 
-        Allure.step("Act: Nhập 3 dấu cách rồi Save", () -> detail.addValue("   "));
+        act("Nhập 3 dấu cách rồi bấm Save", () -> detail.addValue("   "));
 
-        Allure.step("Assert: Bảng vẫn Nothing found, cột Values vẫn trống", () -> {
+        verify("Bảng vẫn Nothing found, cột Values vẫn trống", () -> {
             Assert.assertFalse(detail.isServerErrorPage(), "Không được ra trang lỗi");
             Assert.assertTrue(detail.isNothingFoundShown(),
                     "Bảng giá trị phải vẫn Nothing found, thực tế có " + detail.rowCount() + " dòng: " + detail.values());
-            Assert.assertEquals(list.valuesOf(findRow(list, name)), List.of(), "Cột Values");
+            Assert.assertEquals(list.valuesOf(list.findRow(name)), List.of(), "Cột Values");
         });
     }
 
@@ -158,17 +159,13 @@ public class AttributeValueTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
 
-        Allure.step("Act: Thêm giá trị " + length + " ký tự", () -> detail.addValue(value));
-        Allure.step("Assert: Thêm thành công", () ->
+        act("Thêm giá trị " + length + " ký tự", () -> detail.addValue(value));
+        verify(StepNames.CREATED, () ->
                 Assert.assertEquals(detail.getNotifyMessage(), VALUE_INSERTED, "Thông báo sau khi thêm giá trị"));
 
-        AttributeValueEditPage valueEdit = Allure.step("Act: Mở trang sửa giá trị (theo đường dẫn nút Edit)", () ->
-                {
-                    String url = detail.editValueUrlOfRow(0);
-                    browser().openUrl(url);
-                    return new AttributeValueEditPage(driver()).waitUntilLoaded();
-                });
-        Allure.step("Assert: Ô Attribute Value đúng từng ký tự", () ->
+        AttributeValueEditPage valueEdit = act("Mở trang sửa giá trị (theo đường dẫn nút Edit)",
+                () -> detail.openEditValueByUrl(0));
+        verify("Ô Attribute Value đúng từng ký tự", () ->
                 Assert.assertEquals(valueEdit.valueText(), value, "Giá trị sau khi lưu"));
     }
 
@@ -184,14 +181,14 @@ public class AttributeValueTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
-        Allure.step("Arrange: Thêm giá trị " + oldValue, () -> detail.addValue(oldValue));
+        arrange("Thêm giá trị " + oldValue, () -> detail.addValue(oldValue));
         String detailUrl = detail.currentUrl();
 
-        Allure.step("Assert: Rê chuột lên nút thứ nhất hiện Edit", () ->
+        verify("Rê chuột lên nút thứ nhất hiện Edit", () ->
                 Assert.assertEquals(detail.editTooltipOfFirstRow(), "Edit", "Chú thích nút"));
 
-        AttributeValueEditPage valueEdit = Allure.step("Act: Bấm nút Edit", () -> detail.editValue(0));
-        Allure.step("Assert: Trang Attribute Value Information", () -> {
+        AttributeValueEditPage valueEdit = act(StepNames.CLICK_EDIT, () -> detail.editValue(0));
+        verify("Trang Attribute Value Information", () -> {
             Assert.assertTrue(valueEdit.currentUrl().matches(".*/admin/edit-attribute-value/\\d+$"), "Thanh địa chỉ: " + valueEdit.currentUrl());
             Assert.assertTrue(valueEdit.isTitleDisplayed(), "Tiêu đề Attribute Value Information");
             Assert.assertEquals(valueEdit.valueText(), oldValue, "Ô Attribute Value");
@@ -199,14 +196,14 @@ public class AttributeValueTest extends AttributeTestBase {
             Assert.assertFalse(valueEdit.hasLanguageTabs(), "Không được có tab ngôn ngữ");
         });
 
-        Allure.step("Act: Đổi giá trị rồi Save", () -> valueEdit.changeValue(newValue));
-        Allure.step("Assert: Cập nhật thành công, vẫn ở trang sửa giá trị với giá trị mới", () -> {
+        act("Đổi giá trị rồi bấm Save", () -> valueEdit.changeValue(newValue));
+        verify("Cập nhật thành công, vẫn ở trang sửa giá trị với giá trị mới", () -> {
             Assert.assertEquals(valueEdit.getNotifyMessage(), VALUE_UPDATED, "Thông báo sau khi sửa");
             Assert.assertTrue(valueEdit.isTitleDisplayed(), "Phải vẫn ở trang sửa giá trị");
             Assert.assertEquals(valueEdit.valueText(), newValue, "Ô Attribute Value");
         });
 
-        Allure.step("Assert: Attribute Detail hiện giá trị mới", () ->
+        verify("Attribute Detail hiện giá trị mới", () ->
                 Assert.assertEquals(detail.openUrl(detailUrl).values(), List.of(newValue), "Bảng giá trị"));
     }
 
@@ -222,34 +219,29 @@ public class AttributeValueTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
-        Allure.step("Arrange: Thêm giá trị " + value, () -> detail.addValue(value));
+        arrange("Thêm giá trị " + value, () -> detail.addValue(value));
 
-        Allure.step("Act: Bấm nút Delete ở dòng giá trị", () -> detail.openDeleteOfRow(0));
-        Allure.step("Assert: Hộp xác nhận đúng nội dung", () -> {
+        act("Bấm Delete ở dòng giá trị", () -> detail.openDeleteOfRow(0));
+        verify(StepNames.DELETE_DIALOG, () -> {
             Assert.assertEquals(detail.deleteModalText(), "Are you sure to delete this?", "Câu hỏi xác nhận");
             Assert.assertEquals(detail.deleteModalButtons(), List.of("Cancel", "Delete"), "Nút trong hộp");
         });
 
-        Allure.step("Act: (a) Bấm Cancel", () -> detail.closeDeleteModal(AttributeDetailPage.CloseBy.CANCEL));
-        Allure.step("Assert: (a) Hộp đóng, giá trị còn", () -> {
+        act("(a) Bấm Cancel", () -> detail.closeDeleteModal(AttributeDetailPage.CloseBy.CANCEL));
+        verify("(a) Hộp đóng, giá trị còn", () -> {
             Assert.assertTrue(detail.waitDeleteModalClosed(), "Hộp phải đóng");
             Assert.assertEquals(detail.values(), List.of(value), "Bảng giá trị");
         });
 
-        Allure.step("Act: (b) Mở lại hộp và bấm Delete", () -> detail.deleteRow(0));
-        Allure.step("Assert: (b) Xoá thành công, vẫn ở Attribute Detail, bảng Nothing found", () -> {
+        act("(b) Mở lại hộp và bấm Delete", () -> detail.deleteRow(0));
+        verify("(b) Xoá thành công, vẫn ở Attribute Detail, bảng Nothing found", () -> {
             Assert.assertEquals(detail.getNotifyMessage(), VALUE_DELETED, "Thông báo sau khi xoá giá trị");
             Assert.assertTrue(detail.isTitleDisplayed(), "Phải vẫn ở trang Attribute Detail");
             Assert.assertTrue(detail.isNothingFoundShown(), "Bảng phải Nothing found");
         });
     }
 
-    @DataProvider(name = "injectionValues", parallel = true)
-    public Object[][] injectionValues() {
-        return new Object[][]{{"a", "<script>alert(1)</script>"}, {"b", "<img src=x onerror=alert(1)>"}, {"c", "' OR '1'='1 -- "}};
-    }
-
-    @Test(dataProvider = "injectionValues", groups = {"regression", "attribute", "auth", "security"},
+    @Test(dataProvider = "injectionPayloads", dataProviderClass = DataProviderFactory.class, groups = {"regression", "attribute", "auth", "security"},
             description = "Mã script và chuỗi SQL ở giá trị được lưu như chữ, không chạy")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra giá trị chứa script, thẻ img onerror, chuỗi SQL thêm thành công; bảng giá trị và cột Values ở danh sách hiện nguyên văn dạng chữ, không bật hộp thoại.")
@@ -263,15 +255,15 @@ public class AttributeValueTest extends AttributeTestBase {
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
 
-        Allure.step("Act: Thêm giá trị chứa mã", () -> detail.addValue(value));
+        act("Thêm giá trị chứa mã", () -> detail.addValue(value));
 
-        Allure.step("Assert: Bảng giá trị — không hộp thoại, giá trị nguyên văn", () -> {
+        verify("Bảng giá trị — không hộp thoại, giá trị nguyên văn", () -> {
             Assert.assertFalse(detail.isAlertOpen(), "Không được bật hộp thoại ở Attribute Detail");
             Assert.assertEquals(detail.getNotifyMessage(), VALUE_INSERTED, "Thông báo sau khi thêm giá trị");
             Assert.assertEquals(detail.values(), List.of(value), "Bảng giá trị");
         });
-        Allure.step("Assert: Danh sách — không hộp thoại, nhãn nguyên văn", () -> {
-            int row = findRow(list, name);
+        verify("Danh sách — không hộp thoại, nhãn nguyên văn", () -> {
+            int row = list.findRow(name);
             Assert.assertFalse(list.isAlertOpen(), "Không được bật hộp thoại ở danh sách");
             Assert.assertEquals(list.valuesOf(row), List.of(value), "Cột Values");
         });
@@ -289,12 +281,12 @@ public class AttributeValueTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
         AttributeDetailPage detail = openDetailOf(list, name);
-        Allure.step("Arrange: Thêm 1 giá trị ngắn và 1 giá trị 256 ký tự", () -> {
+        arrange("Thêm 1 giá trị ngắn và 1 giá trị 256 ký tự", () -> {
             detail.addValue(shortValue);
             detail.addValue(longValue);
         });
 
-        Allure.step("Assert: Mọi nút ở cột Action bấm trúng được", () -> {
+        verify("Mọi nút ở cột Action bấm trúng được", () -> {
             for (int row = 0; row < detail.rowCount(); row++) {
                 for (int button = 0; button < 2; button++) {
                     Assert.assertTrue(detail.isRowButtonClickable(row, button),
@@ -303,14 +295,14 @@ public class AttributeValueTest extends AttributeTestBase {
             }
         });
 
-        Allure.step("Act + Assert: Hộp xoá của giá trị ngắn mở bình thường, bấm Cancel", () -> {
+        actAndVerify("Hộp xoá của giá trị ngắn mở bình thường, bấm Cancel", () -> {
             detail.openDeleteOfRow(detail.values().indexOf(shortValue));
             Assert.assertTrue(detail.isDeleteModalShown(), "Hộp Delete Confirmation phải mở");
             detail.closeDeleteModal(AttributeDetailPage.CloseBy.CANCEL);
             Assert.assertTrue(detail.waitDeleteModalClosed(), "Cancel phải đóng hộp");
         });
 
-        Allure.step("Assert: Danh sách không có thanh cuộn ngang", () -> {
+        verify("Danh sách không có thanh cuộn ngang", () -> {
             list.open();
             Assert.assertTrue(list.hasNoHorizontalScroll(), "Danh sách không được cuộn ngang");
         });

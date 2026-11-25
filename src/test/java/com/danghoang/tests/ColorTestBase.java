@@ -1,12 +1,8 @@
 package com.danghoang.tests;
 
-import com.danghoang.base.BaseTest;
 import com.danghoang.pages.ColorEditPage;
 import com.danghoang.pages.ColorListPage;
 import com.danghoang.utils.TestDataGenerator;
-import io.qameta.allure.Allure;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
 
 import java.util.ArrayList;
@@ -20,7 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Name giữ ≤ 30 ký tự, không dấu cách (máy chủ cắt / xoá) — mọi tên chứa mã truy vết để tìm lại và dọn.
  * Tên không chứa được mã (1 ký tự, bị lưu rỗng, payload dài) thì ghi id màu — khi dọn đổi tên về mã truy vết rồi xoá.
  */
-abstract class ColorTestBase extends BaseTest {
+abstract class ColorTestBase extends TrackedDataTestBase {
 
     protected static final String INSERTED = "Color has been inserted successfully";
     protected static final String UPDATED = "Color has been updated successfully";
@@ -32,17 +28,8 @@ abstract class ColorTestBase extends BaseTest {
     /** Màu mới nằm đầu bảng; chạy song song 5 luồng nên chỉ chắc nằm trong vài dòng đầu. */
     protected static final int TOP_ROWS = 5;
 
-    private static final Logger LOG = LogManager.getLogger(ColorTestBase.class);
     private static final String HEX = "0123456789abcdef";
-    private final ThreadLocal<List<String>> tokens = ThreadLocal.withInitial(ArrayList::new);
     private final ThreadLocal<List<String>> colorIds = ThreadLocal.withInitial(ArrayList::new);
-
-    /** Mã truy vết cho dữ liệu của test — màu có tên chứa mã này sẽ bị xoá khi test kết thúc. */
-    protected String newToken(String testName) {
-        String token = TestDataGenerator.token(testName);
-        tokens.get().add(token);
-        return token;
-    }
 
     /** Màu có tên không chứa mã truy vết — dọn theo id. */
     protected void trackColorId(String id) {
@@ -65,28 +52,21 @@ abstract class ColorTestBase extends BaseTest {
     /** PC-1: đăng nhập admin rồi mở All Colors. */
     protected ColorListPage openColorsAsAdmin() {
         loginAsAdmin();
-        return Allure.step("Arrange: Mở trang All Colors", () -> new ColorListPage(driver()).open());
+        return arrange("Mở trang All Colors", () -> new ColorListPage().open());
     }
 
     /** PC-2: tạo màu bằng form Add New Color. */
     protected void createColor(ColorListPage list, String name, String code) {
-        Allure.step("Arrange: Tạo màu test " + name + " · " + code, () -> {
+        arrange("Tạo màu test " + name + " · " + code, () -> {
             list.open();
             list.createColor(name, code);
             Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Tạo màu test phải thành công");
         });
     }
 
-    /** Tìm theo từ khoá, trả về vị trí dòng mang đúng tên (-1 nếu không có). */
-    protected int findRow(ColorListPage list, String keyword, String name) {
-        list.open();
-        list.search(keyword);
-        return list.rowIndexOf(name);
-    }
-
     protected ColorEditPage openEditOf(ColorListPage list, String name) {
-        return Allure.step("Arrange: Mở trang sửa của " + name, () -> {
-            int row = findRow(list, name, name);
+        return arrange("Mở trang sửa của " + name, () -> {
+            int row = list.findRow(name);
             Assert.assertTrue(row >= 0, "Phải tìm thấy màu test " + name);
             return list.editRow(row);
         });
@@ -97,7 +77,7 @@ abstract class ColorTestBase extends BaseTest {
      * mở trang sửa, so Color Code. Ghi luôn id để dọn.
      */
     protected String idOfNewColor(ColorListPage list, String name, String code) {
-        return Allure.step("Arrange: Xác định id của màu vừa tạo theo Color Code " + code, () -> {
+        return arrange("Xác định id của màu vừa tạo theo Color Code " + code, () -> {
             list.open();
             List<String> names = list.names();
             List<String> candidates = new ArrayList<>();
@@ -109,7 +89,7 @@ abstract class ColorTestBase extends BaseTest {
                     candidates.add(list.idOfRow(i));
                 }
             }
-            ColorEditPage edit = new ColorEditPage(driver());
+            ColorEditPage edit = new ColorEditPage();
             for (String id : candidates) {
                 if (edit.openById(id).codeValue().equalsIgnoreCase(code.trim())) {
                     trackColorId(id);
@@ -122,40 +102,25 @@ abstract class ColorTestBase extends BaseTest {
 
     @Override
     protected void cleanUpTestData() {
-        List<String> ids = new ArrayList<>(colorIds.get());
-        List<String> created = new ArrayList<>(tokens.get());
-        colorIds.remove();
-        tokens.remove();
+        List<String> ids = takeAll(colorIds);
+        List<String> created = takeTokens();
         dismissAlertIfOpen();
         for (String id : ids) {
             String token = TestDataGenerator.token("Del");
             created.add(token);
-            runCleanup("Dọn dữ liệu: đổi tên màu id " + id + " thành " + token, () -> renameForCleanup(id, token));
+            runCleanup("đổi tên màu id " + id + " thành " + token, () -> renameForCleanup(id, token));
         }
         for (String token : created) {
-            runCleanup("Dọn dữ liệu: xoá màu chứa " + token, () -> new ColorListPage(driver()).deleteAllContaining(token));
+            runCleanup("xoá màu chứa " + token, () -> new ColorListPage().deleteAllContaining(token));
         }
     }
 
     private void renameForCleanup(String id, String token) {
-        ColorEditPage edit = new ColorEditPage(driver());
+        ColorEditPage edit = new ColorEditPage();
         browser().openPath("/admin/colors/edit/" + id + "?lang=en");
         if (edit.isPageNotFound() || !edit.isTitleDisplayed()) {
             return;
         }
-        edit.enterName(token);
-        edit.saveAndWait();
-    }
-
-    private void runCleanup(String title, Runnable action) {
-        try {
-            Allure.step(title, action::run);
-        } catch (RuntimeException e) {
-            LOG.warn("{} — không dọn được, cần xoá tay", title, e);
-        }
-    }
-
-    private void dismissAlertIfOpen() {
-        browser().dismissAlertIfOpen();
+        edit.saveWithName(token);
     }
 }

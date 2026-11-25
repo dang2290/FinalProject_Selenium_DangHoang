@@ -1,9 +1,9 @@
 package com.danghoang.tests;
 
 import com.danghoang.base.BaseTest;
+import com.danghoang.base.StepNames;
 import com.danghoang.pages.RegistrationPage;
 import com.danghoang.utils.TestDataGenerator;
-import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
@@ -28,13 +28,13 @@ public class RegistrationTest extends BaseTest {
     @Description("Kiểm tra /users/registration có tiêu đề, 4 ô đúng thứ tự, ô tick điều khoản chưa tick, nút Create Account, dòng Log In và không có ô số điện thoại.")
     public void testRegistrationPageElements() {
         tc("AEC_LOGIN_TC_004", "smoke", "login");
-        RegistrationPage page = new RegistrationPage(driver());
+        RegistrationPage page = new RegistrationPage();
 
-        Allure.step("Arrange: Mở trang đăng ký, đóng popup nếu có", () -> {
+        arrange("Mở trang đăng ký, đóng popup nếu có", () -> {
             page.open();
         });
 
-        Allure.step("Assert: Đối chiếu bảng kiểm thành phần", () -> {
+        verify(StepNames.SCREEN_CHECKLIST, () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertTrue(page.isTitleDisplayed(), "1. Tiêu đề 'Create an account.'");
             soft.assertEquals(page.fieldPlaceholdersInOrder(), List.of("Full Name", "Email", "Password", "Confirm Password"),
@@ -53,20 +53,19 @@ public class RegistrationTest extends BaseTest {
     @Description("Kiểm tra điền đủ 4 ô nhưng không tick điều khoản thì trình duyệt nhắc ở ô tick, form không gửi, không tạo tài khoản.")
     public void testRegistrationRequiresTerms() {
         tc("AEC_LOGIN_TC_025", "regression", "login", "validation");
-        RegistrationPage page = new RegistrationPage(driver());
+        RegistrationPage page = new RegistrationPage();
         String password = TestDataGenerator.password("TC025");
 
-        Allure.step("Arrange: Mở trang đăng ký", () -> {
+        arrange("Mở trang đăng ký", () -> {
             page.open();
-            page.markPage();
         });
 
-        Allure.step("Act: Điền 4 ô, không tick điều khoản, bấm Create Account", () -> {
+        act("Điền 4 ô, không tick điều khoản, bấm Create Account", () -> {
             page.fillForm("Auto TC025", TestDataGenerator.email("login_TC025"), password, password);
             page.submit();
         });
 
-        Allure.step("Assert: Trình duyệt nhắc ở ô tick, form không gửi", () -> {
+        verify("Trình duyệt nhắc ở ô tick, form không gửi", () -> {
             Assert.assertFalse(page.termsValidationMessage().isEmpty(), "Trình duyệt phải nhắc ở ô tick điều khoản");
             Assert.assertTrue(page.isSamePageInstance(), "Form không được gửi");
         });
@@ -77,20 +76,20 @@ public class RegistrationTest extends BaseTest {
     @Description("Kiểm tra đăng ký bằng email của tài khoản admin đã tồn tại thì báo 'Email or Phone already exists.' và không tạo tài khoản.")
     public void testRegistrationExistingEmailRejected() {
         tc("AEC_LOGIN_TC_026", "regression", "login", "validation");
-        RegistrationPage page = new RegistrationPage(driver());
+        RegistrationPage page = new RegistrationPage();
         String password = TestDataGenerator.password("TC026");
 
-        Allure.step("Arrange: Mở trang đăng ký", () -> {
+        arrange("Mở trang đăng ký", () -> {
             page.open();
         });
 
-        Allure.step("Act: Đăng ký bằng email admin đã tồn tại", () -> {
+        act("Đăng ký bằng email admin đã tồn tại", () -> {
             page.fillForm("Auto TC026", config.getUsername(), password, password);
             page.acceptTerms();
             page.submit();
         });
 
-        Allure.step("Assert: Báo email đã tồn tại, ở lại trang đăng ký", () -> {
+        verify("Báo email đã tồn tại, ở lại trang đăng ký", () -> {
             Assert.assertEquals(page.getNotifyMessage(), "Email or Phone already exists.", "Thông báo email trùng");
             Assert.assertTrue(page.isOn("/users/registration"), "Phải ở lại /users/registration");
         });

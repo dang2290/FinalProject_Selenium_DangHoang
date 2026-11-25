@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.AttributeDetailPage;
 import com.danghoang.pages.AttributeEditPage;
 import com.danghoang.pages.AttributeListPage;
@@ -35,15 +37,15 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = "AutoAttr_" + newToken("TC005");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Nhập Name rồi bấm Save", () -> list.createAttribute(name));
+        act(StepNames.ENTER_NAME_AND_SAVE, () -> list.createAttribute(name));
 
-        Allure.step("Assert: Thông báo thành công, vẫn ở danh sách, form trống lại", () -> {
+        verify("Thông báo thành công, vẫn ở danh sách, form trống lại", () -> {
             Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi tạo");
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/attributes", "Thanh địa chỉ");
             Assert.assertEquals(list.nameValue(), "", "Ô Name phải trống lại");
         });
 
-        Allure.step("Assert: Thuộc tính mới ở đầu bảng, Values trống, đủ 3 nút", () -> {
+        verify("Thuộc tính mới ở đầu bảng, Values trống, đủ 3 nút", () -> {
             int row = list.rowIndexOf(name);
             Assert.assertTrue(row >= 0 && row < TOP_ROWS, "Thuộc tính mới phải ở đầu bảng, thực tế dòng " + (row + 1));
             Assert.assertEquals(list.rowNumbers().get(row).intValue(), row + 1, "Cột #");
@@ -59,24 +61,18 @@ public class AttributeCreateTest extends AttributeTestBase {
         tc("AEC_ATTR_TC_012", "regression", "attribute", "auth", "validation");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Để trống Name, bấm Save", () -> {
-            list.markPage();
+        act("Để trống Name rồi bấm Save", () -> {
             list.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn ở ô Name", () -> {
+        verify(StepNames.NAME_BLOCKED, () -> {
             Assert.assertFalse(list.nameValidationMessage().isEmpty(), "Phải có bong bóng nhắc nhập");
             Assert.assertTrue(list.isSamePageInstance(), "Không được gửi form");
             Assert.assertTrue(list.isNameFocused(), "Con trỏ phải nằm trong ô Name");
         });
     }
 
-    @DataProvider(name = "validNameLengths", parallel = true)
-    public Object[][] validNameLengths() {
-        return new Object[][]{{"b", 49}, {"c", 50}};
-    }
-
-    @Test(dataProvider = "validNameLengths", groups = {"regression", "attribute", "auth", "validation", "boundary"},
+    @Test(dataProvider = "nameLengthsWithin50", dataProviderClass = DataProviderFactory.class, groups = {"regression", "attribute", "auth", "validation", "boundary"},
             description = "Name có độ dài hợp lệ được lưu nguyên vẹn")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra Name 49 và 50 ký tự lưu thành công, trang sửa giữ đúng từng ký tự. Biến thể a (1 ký tự) không automate.")
@@ -87,21 +83,16 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = padTo("AutoAttr" + length + "_" + token + "_", 'x', length);
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Tạo thuộc tính Name " + length + " ký tự", () -> createAttribute(list, name));
+        act("Tạo thuộc tính Name " + length + " ký tự", () -> createAttribute(list, name));
 
         AttributeEditPage edit = openEditOf(list, name);
-        Allure.step("Assert: Ô Name đúng từng ký tự", () -> {
+        verify("Ô Name đúng từng ký tự", () -> {
             Assert.assertEquals(edit.nameValue(), name, "Name sau khi lưu");
             Assert.assertEquals(edit.nameValue().length(), length, "Độ dài Name");
         });
     }
 
-    @DataProvider(name = "tooLongNames", parallel = true)
-    public Object[][] tooLongNames() {
-        return new Object[][]{{"a", 51}, {"b", 255}};
-    }
-
-    @Test(dataProvider = "tooLongNames", groups = {"regression", "attribute", "auth", "validation", "boundary", "knownIssue"},
+    @Test(dataProvider = "nameLengthsOver50", dataProviderClass = DataProviderFactory.class, groups = {"regression", "attribute", "auth", "validation", "boundary", "knownIssue"},
             description = "Name dài hơn 50 ký tự phải bị chặn kèm thông báo, không được cắt im lặng")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra Name 51 và 255 ký tự thì không có thuộc tính mới. Đang lệch: hệ thống báo thành công và lưu 50 ký tự đầu (AMB-ATTR-01).")
@@ -112,9 +103,9 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = padTo("AutoAttr" + length + "_" + token + "_", 'x', length);
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Nhập Name " + length + " ký tự rồi Save", () -> list.createAttribute(name));
+        act("Nhập Name " + length + " ký tự rồi Save", () -> list.createAttribute(name));
 
-        Allure.step("Assert: Không có thuộc tính mới (kể cả bản bị cắt)", () -> {
+        verify("Không có thuộc tính mới (kể cả bản bị cắt)", () -> {
             list.open();
             Assert.assertEquals(list.rowIndexesContaining(token), List.of(), "Thuộc tính quá dài không được lưu");
         });
@@ -128,12 +119,12 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = "AutoAttrTrim_" + newToken("TC016");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Tạo thuộc tính với Name có khoảng trắng đầu/cuối", () -> createAttribute(list, "   " + name + "   "));
+        act("Tạo thuộc tính với Name có khoảng trắng đầu/cuối", () -> createAttribute(list, "   " + name + "   "));
 
-        Allure.step("Assert: Danh sách hiện Name đã bỏ khoảng trắng", () ->
+        verify("Danh sách hiện Name đã bỏ khoảng trắng", () ->
                 Assert.assertTrue(list.rowIndexOf(name) >= 0, "Phải có dòng mang đúng " + name));
         AttributeEditPage edit = openEditOf(list, name);
-        Allure.step("Assert: Ô Name không còn khoảng trắng đầu/cuối", () ->
+        verify("Ô Name không còn khoảng trắng đầu/cuối", () ->
                 Assert.assertEquals(edit.nameValue(), name, "Name sau khi lưu"));
     }
 
@@ -145,12 +136,12 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = "AutoAttrDup_" + newToken("TC017");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Tạo 2 thuộc tính cùng Name", () -> {
+        act("Tạo 2 thuộc tính cùng Name", () -> {
             createAttribute(list, name);
             createAttribute(list, name);
         });
 
-        Allure.step("Assert: Đúng 2 dòng cùng Name", () ->
+        verify("Đúng 2 dòng cùng Name", () ->
                 Assert.assertEquals(list.rowIndexesContaining(name).size(), 2, "Số dòng mang Name"));
     }
 
@@ -169,12 +160,12 @@ public class AttributeCreateTest extends AttributeTestBase {
         Allure.parameter("Biến thể", variant + " — " + name);
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Tạo thuộc tính", () -> createAttribute(list, name));
+        act("Tạo thuộc tính", () -> createAttribute(list, name));
 
-        Allure.step("Assert: Danh sách hiện đúng Name", () ->
+        verify("Danh sách hiện đúng Name", () ->
                 Assert.assertTrue(list.rowIndexOf(name) >= 0, "Phải có dòng mang đúng " + name));
         AttributeEditPage edit = openEditOf(list, name);
-        Allure.step("Assert: Ô Name đúng như đã nhập", () -> Assert.assertEquals(edit.nameValue(), name, "Name"));
+        verify("Ô Name đúng như đã nhập", () -> Assert.assertEquals(edit.nameValue(), name, "Name"));
     }
 
     @Test(groups = {"regression", "attribute", "auth"}, description = "Bấm Save liên tiếp chỉ tạo một thuộc tính")
@@ -185,23 +176,18 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = "AutoAttrDbl_" + newToken("TC033");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Nhập Name rồi bấm đúp Save", () -> {
+        act("Nhập Name rồi bấm đúp Save", () -> {
             list.enterName(name);
             list.doubleClickSave();
         });
 
-        Allure.step("Assert: Đúng 1 dòng mang Name", () -> {
+        verify("Đúng 1 dòng mang Name", () -> {
             list.open();
             Assert.assertEquals(list.rowIndexesContaining(name).size(), 1, "Không được tạo trùng thuộc tính");
         });
     }
 
-    @DataProvider(name = "injectionNames", parallel = true)
-    public Object[][] injectionNames() {
-        return new Object[][]{{"a", "<script>alert(1)</script>"}, {"b", "<img src=x onerror=alert(1)>"}, {"c", "' OR '1'='1 -- "}};
-    }
-
-    @Test(dataProvider = "injectionNames", groups = {"regression", "attribute", "auth", "security"},
+    @Test(dataProvider = "injectionPayloads", dataProviderClass = DataProviderFactory.class, groups = {"regression", "attribute", "auth", "security"},
             description = "Mã script và chuỗi SQL ở Name được lưu như chữ, không chạy")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra Name chứa script, thẻ img onerror, chuỗi SQL lưu thành công; danh sách, trang sửa, trang Attribute Detail hiện nguyên văn dạng chữ và không bật hộp thoại.")
@@ -211,18 +197,18 @@ public class AttributeCreateTest extends AttributeTestBase {
         Allure.parameter("Biến thể", variant + " — " + name);
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Tạo thuộc tính với Name chứa mã", () -> createAttribute(list, name));
+        act("Tạo thuộc tính với Name chứa mã", () -> createAttribute(list, name));
 
-        Allure.step("Assert: Danh sách — không hộp thoại, tên nguyên văn", () -> {
+        verify(StepNames.LIST_NAME_AS_TEXT, () -> {
             Assert.assertFalse(list.isAlertOpen(), "Không được bật hộp thoại ở danh sách");
             Assert.assertTrue(list.rowIndexOf(name) >= 0, "Danh sách phải hiện nguyên văn " + name);
         });
-        Allure.step("Assert: Trang sửa — không hộp thoại, tên nguyên văn", () -> {
+        verify(StepNames.EDIT_NAME_AS_TEXT, () -> {
             AttributeEditPage edit = openEditOf(list, name);
             Assert.assertFalse(edit.isAlertOpen(), "Không được bật hộp thoại ở trang sửa");
             Assert.assertEquals(edit.nameValue(), name, "Ô Name");
         });
-        Allure.step("Assert: Attribute Detail — không hộp thoại, tên nguyên văn", () -> {
+        verify("Attribute Detail — không hộp thoại, tên nguyên văn", () -> {
             AttributeDetailPage detail = openDetailOf(list, name);
             Assert.assertFalse(detail.isAlertOpen(), "Không được bật hộp thoại ở Attribute Detail");
             Assert.assertEquals(detail.cardHeaders().get(0), name, "Tiêu đề thẻ trái");
@@ -238,9 +224,9 @@ public class AttributeCreateTest extends AttributeTestBase {
         String name = "AutoAttr 📦🎨 " + token;
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Tạo thuộc tính với Name có emoji", () -> createAttribute(list, name));
+        act("Tạo thuộc tính với Name có emoji", () -> createAttribute(list, name));
 
-        Allure.step("Assert: Danh sách hiện đúng emoji", () -> {
+        verify(StepNames.LIST_SHOWS_EMOJI, () -> {
             List<Integer> rows = list.rowIndexesContaining(token);
             Assert.assertEquals(rows.size(), 1, "Phải có 1 dòng chứa mã test");
             Assert.assertEquals(list.names().get(rows.get(0)), name, "Tên ở danh sách");

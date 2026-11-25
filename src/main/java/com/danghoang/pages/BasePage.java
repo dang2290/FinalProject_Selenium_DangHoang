@@ -1,217 +1,194 @@
 package com.danghoang.pages;
 
 import com.danghoang.config.ConfigReader;
-import com.danghoang.utils.WaitHelper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.danghoang.keywords.WebUI;
+import com.danghoang.utils.LogUtils;
 import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.Keys;
-import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.TimeoutException;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Actions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * Lớp cha của mọi Page: chỉ giữ việc thuộc về TRANG (tải lại, thông báo nổi, trang lỗi).
+ * Thao tác element gọi {@code WebUI.xxx(...)}. Page KHÔNG nhận, KHÔNG giữ driver: dùng {@code new LoginPage()}.
+ */
 public abstract class BasePage {
 
     protected static final By NOTIFY_MESSAGE = By.cssSelector("[data-notify='container']");
-    private static final String FOCUS_STYLE_SCRIPT = "const c=getComputedStyle(arguments[0]);"
-            + "return [c.outlineStyle,c.outlineColor,c.boxShadow,c.borderColor,c.backgroundColor].join('|');";
-
+    private static final By BODY = By.tagName("body");
+    protected static final By NOT_FOUND_HEADING = By.xpath("//h1[normalize-space()='Page Not Found!']");
     private static final Duration NOTIFY_SHORT_WAIT = Duration.ofSeconds(4);
 
-    protected final Logger log = LogManager.getLogger(getClass());
-    protected final WebDriver driver;
-    protected final WebDriverWait wait;
-    private String lastPageNotify = "";
+    /** Trang 419 của Laravel, DOM thật 22-11-2026: title "Page Expired", thân trang có 2 ô "419" và "Page Expired". */
+    private static final String EXPIRED_TITLE = "Page Expired";
+    private static final By EXPIRED_MESSAGE =
+            By.xpath("//div[normalize-space()='419']/following-sibling::div[normalize-space()='Page Expired']");
 
-    protected BasePage(WebDriver driver) {
-        this.driver = driver;
-        this.wait = WaitHelper.create(driver);
+    /**
+     * Chạy ở đầu mọi trang: thông báo nổi nào vừa được gắn vào trang thì chép chữ vào window.__aecNotifies,
+     * để khi trang nặng tải xong mà thông báo đã tự tắt vẫn còn bản chép.
+     */
+    private static final String NOTIFY_RECORDER = "new MutationObserver(()=>document.querySelectorAll(\"[data-notify='container']:not([data-aec-seen])\")"
+            + ".forEach(t=>{t.setAttribute('data-aec-seen','');const m=t.querySelector(\"[data-notify='message']\");"
+            + "(window.__aecNotifies=window.__aecNotifies||[]).push((m||t).textContent.trim());}))"
+            + ".observe(document,{childList:true,subtree:true});";
+    /** JS: chữ thông báo nổi mới nhất còn trên trang và chưa bị đánh dấu cũ ("" nếu không có). */
+    private static final String JS_LATEST_NOTIFY = "const t=[...document.querySelectorAll(\"[data-notify='container']:not([data-aec-old])\")];if(!t.length)return '';"
+            + "const e=t[t.length-1];const m=e.querySelector(\"[data-notify='message']\");return (m||e).innerText.trim();";
+    /** JS: thông báo mới nhất trong bản chép của NOTIFY_RECORDER ("" nếu không có). */
+    private static final String JS_RECORDED_NOTIFY = "const n=window.__aecNotifies||[];return n.length?n[n.length-1]:'';";
+    /** JS: đánh dấu mọi thông báo đang có là cũ. */
+    private static final String JS_MARK_NOTIFIES_OLD =
+            "document.querySelectorAll(\"[data-notify='container']\").forEach(t => t.setAttribute('data-aec-old', ''));";
+    /** JS: đặt dấu lên trang hiện tại / hỏi dấu còn không — trang tải lại thì dấu mất. */
+    private static final String JS_MARK_PAGE = "window.__aecMark = true;";
+    private static final String JS_PAGE_MARKED = "return window.__aecMark === true;";
+    /** JS: trang không rộng hơn cửa sổ (không có thanh cuộn ngang). */
+    private static final String JS_NO_HORIZONTAL_SCROLL = "return document.documentElement.scrollWidth <= window.innerWidth;";
+
+    private String lastPageNotify = "";
+    private int lastNotifyAction;
+
+    protected BasePage() {
+        WebUI.registerPage(this);
+        WebUI.runOnEveryPage(NOTIFY_RECORDER);
+    }
+
+    /** Tên hiện trong log và report. */
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
     }
 
     protected void navigate(String path) {
-        String url = ConfigReader.getInstance().getBaseUrl() + path;
-        log.info("Mở {}", url);
-        driver.get(url);
-        WaitHelper.waitForPageReady(driver);
-    }
-
-    protected WebElement waitForVisible(By locator) {
-        return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
-    }
-
-    protected void click(By locator) {
-        log.info("Bấm {}", locator);
-        wait.until(ExpectedConditions.elementToBeClickable(locator)).click();
-    }
-
-    protected void type(By locator, String value) {
-        log.info("Nhập vào {}", locator);
-        WebElement element = waitForVisible(locator);
-        element.clear();
-        if (value.codePoints().anyMatch(cp -> cp > 0xFFFF)) {
-            // ChromeDriver không gõ được ký tự ngoài BMP (emoji) — đặt giá trị và phát sự kiện input như khi gõ
-            js("arguments[0].value=arguments[1];arguments[0].dispatchEvent(new Event('input',{bubbles:true}));",
-                    element, value);
-        } else {
-            element.sendKeys(value);
-        }
-    }
-
-    protected String getText(By locator) {
-        return waitForVisible(locator).getText().trim();
-    }
-
-    protected boolean isVisible(By locator) {
-        try {
-            return waitForVisible(locator).isDisplayed();
-        } catch (TimeoutException e) {
-            return false;
-        }
-    }
-
-    protected boolean isPresentNow(By locator) {
-        return driver.findElements(locator).stream().anyMatch(WebElement::isDisplayed);
-    }
-
-    protected void waitForUrlContains(String fragment) {
-        wait.until(ExpectedConditions.urlContains(fragment));
+        WebUI.openURL(ConfigReader.getInstance().getBaseUrl() + path);
+        WebUI.waitForPageLoaded();
     }
 
     /** Chờ trang chuyển tới đúng đường dẫn (không tính tham số). */
     public void waitForPath(String path) {
         try {
-            wait.until(d -> path.equals(currentPath()));
+            WebUI.waitUntil("địa chỉ là " + path, () -> path.equals(currentPath()));
         } catch (TimeoutException e) {
-            log.warn("Không tới {}, đang ở {}", path, currentPath());
+            LogUtils.warn("Không tới {}, đang ở {}", path, currentPath());
         }
-    }
-
-    /**
-     * Bấm vào start rồi nhấn Tab count lần, trả về phần tử nhận focus sau mỗi lần:
-     * name của ô nhập · name của select gốc nếu là nút bootstrap-select · chữ trên nút.
-     */
-    protected List<String> tabSequenceFrom(By start, int count) {
-        driver.findElement(start).click();
-        List<String> sequence = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            new Actions(driver).sendKeys(Keys.TAB).perform();
-            sequence.add((String) js("const a=document.activeElement,bs=a.closest('.bootstrap-select');"
-                    + "return bs ? bs.querySelector('select').name : (a.name||a.innerText.trim());"));
-        }
-        return sequence;
-    }
-
-    /**
-     * Ô nhập nào trông giống hệt nhau khi đang focus và khi không focus.
-     * Bỏ focus bằng blur() thay vì bấm ra chỗ khác — chỗ bấm có thể bị header cố định che khi trang đã cuộn.
-     */
-    protected List<String> fieldsWithoutVisibleFocus(List<By> fields, List<String> names) {
-        List<String> invisible = new ArrayList<>();
-        for (int i = 0; i < fields.size(); i++) {
-            WebElement field = driver.findElement(fields.get(i));
-            js("arguments[0].scrollIntoView({block:'center'});if(document.activeElement)document.activeElement.blur();", field);
-            String blurred = stableStyle(field);
-            field.click();
-            if (stableStyle(field).equals(blurred)) {
-                invisible.add(names.get(i));
-            }
-        }
-        js("if(document.activeElement)document.activeElement.blur();");
-        return invisible;
-    }
-
-    /** Bấm vào from rồi nhấn Tab một lần tới target — target có đổi kiểu so với lúc chưa focus không. */
-    protected boolean changesStyleWhenTabbedTo(By from, By target) {
-        WebElement element = driver.findElement(target);
-        js("arguments[0].scrollIntoView({block:'center'});if(document.activeElement)document.activeElement.blur();", element);
-        String blurred = stableStyle(element);
-        driver.findElement(from).click();
-        new Actions(driver).sendKeys(Keys.TAB).perform();
-        return driver.switchTo().activeElement().equals(element) && !stableStyle(element).equals(blurred);
-    }
-
-    /** Kiểu viền sau khi hiệu ứng chuyển màu đã dừng (2 lần đọc liên tiếp giống nhau). */
-    private String stableStyle(WebElement element) {
-        String[] last = {""};
-        return wait.until(d -> {
-            String now = (String) js(FOCUS_STYLE_SCRIPT, element);
-            boolean stable = now.equals(last[0]);
-            last[0] = now;
-            return stable ? now : null;
-        });
     }
 
     /** Làm hành động khiến trang tải lại, chờ trang mới tải xong. */
     protected void andWaitForNewPage(Runnable action) {
         markPage();
         action.run();
-        wait.until(d -> !isSamePageInstance());
-        WaitHelper.waitForPageReady(driver);
-        // Thông báo nổi hiện ngay khi trang tải xong và tự tắt sau vài giây — trang nặng (bảng ~600 dòng)
-        // dựng xong thì thông báo có thể đã tắt, nên ghi lại ngay lúc này
+        WebUI.waitUntil("trang mới thay trang cũ", () -> !isSamePageInstance());
+        WebUI.waitForPageLoaded();
+        // Thông báo nổi tự tắt sau vài giây, trang nặng dựng xong có thể đã tắt, nên ghi lại ngay lúc này;
+        // đã tắt thì lấy bản NOTIFY_RECORDER chép lại lúc nó vừa hiện
         lastPageNotify = currentNotifyText();
+        if (lastPageNotify.isEmpty()) {
+            lastPageNotify = recordedNotifyText();
+            if (!lastPageNotify.isEmpty()) {
+                LogUtils.info("Thông báo nổi đã tắt trước khi trang tải xong, dùng bản chép lúc nó hiện: [{}]", lastPageNotify);
+            }
+        }
+        lastNotifyAction = WebUI.getActionCount();
     }
 
-    /** Chữ của thông báo nổi mới nhất đang có trên trang ("" nếu không có) — đọc một lần bằng JS, không bị stale. */
-    private String currentNotifyText() {
-        return (String) js("const t=[...document.querySelectorAll(\"[data-notify='container']\")];if(!t.length)return '';"
-                + "const e=t[t.length-1];const m=e.querySelector(\"[data-notify='message']\");return (m||e).innerText.trim();");
+    /** Hành động đã đưa sang trang khác: Page đích nhận luôn thông báo ghi lúc trang tải, test hỏi thẳng Page đích. */
+    protected <P extends BasePage> P arrivedAt(P next) {
+        BasePage target = next;
+        target.lastPageNotify = lastPageNotify;
+        target.lastNotifyAction = lastNotifyAction;
+        return next;
     }
 
-    protected Object js(String script, Object... args) {
-        return ((JavascriptExecutor) driver).executeScript(script, args);
+    /** Như trên; trang mới không phải trang lỗi máy chủ thì chờ nó sẵn sàng. */
+    protected void andWaitUnlessError(Runnable action, Runnable ready) {
+        andWaitForNewPage(action);
+        if (!isServerErrorPage()) {
+            ready.run();
+        }
     }
 
-    /** Thông báo bật lỗi của trình duyệt tại ô (rỗng = ô hợp lệ). */
-    protected String validationMessage(By locator) {
-        return (String) js("return arguments[0].validationMessage;", driver.findElement(locator));
+    /** Ảnh xem trước dựng bằng AJAX sau khi trang tải: ô đã có id ảnh thì chờ ảnh hiện rồi mới đếm. */
+    protected int previewCountWhenReady(String imageId, By items) {
+        if (imageId != null && !imageId.isBlank()) {
+            try {
+                WebUI.waitUntil("ảnh xem trước của id " + imageId, () -> WebUI.checkElementExist(items));
+            } catch (TimeoutException e) {
+                LogUtils.warn("Ô ảnh có id {} nhưng không dựng được ảnh xem trước", imageId);
+            }
+        }
+        return WebUI.getElementCount(items);
     }
 
-    /** Đánh dấu trang hiện tại — trang tải lại thì dấu mất. */
-    public void markPage() {
-        js("window.__aecMark = true;");
+    /**
+     * Đánh dấu trang hiện tại: trang tải lại thì dấu mất. Mọi hàm bấm gửi form (clickSave, submit…) tự gọi
+     * trước khi bấm, nên test chỉ việc hỏi {@link #isSamePageInstance()} sau đó.
+     */
+    protected void markPage() {
+        WebUI.executeJS(JS_MARK_PAGE);
     }
 
     public boolean isSamePageInstance() {
-        return Boolean.TRUE.equals(js("return window.__aecMark === true;"));
+        return Boolean.TRUE.equals(WebUI.executeJS(JS_PAGE_MARKED));
     }
 
-    /** Nội dung thông báo nổi mới nhất (góc dưới trái). */
+    /** Thông báo nổi của hành động vừa xong (góc dưới trái). */
     public String getNotifyMessage() {
-        // Chờ ngắn thông báo đang hiện (kể cả thông báo đến sau qua AJAX); đã tắt thì dùng bản ghi lúc trang vừa tải
+        String message = latestNotify();
+        LogUtils.info("Thông báo nổi = [{}]", message);
+        return message;
+    }
+
+    private String latestNotify() {
+        // Chờ ngắn thông báo đang hiện (kể cả đến sau qua AJAX); đã tắt thì dùng bản ghi lúc trang vừa tải,
+        // nhưng chỉ khi từ lúc ghi chưa có hành động nào khác
         try {
-            return new WebDriverWait(driver, NOTIFY_SHORT_WAIT).until(d -> {
-                String text = currentNotifyText();
-                return text.isEmpty() ? null : text;
-            });
+            return WebUI.waitUntil("thông báo nổi", NOTIFY_SHORT_WAIT, this::notifyTextOrNull);
         } catch (TimeoutException e) {
-            if (!lastPageNotify.isEmpty()) {
+            if (!lastPageNotify.isEmpty() && lastNotifyAction == WebUI.getActionCount()) {
                 return lastPageNotify;
             }
         }
-        return wait.until(d -> {
-            String text = currentNotifyText();
-            return text.isEmpty() ? null : text;
-        });
+        return WebUI.waitUntil("thông báo nổi", this::notifyTextOrNull);
     }
 
-    /** Có hộp thoại alert của trình duyệt đang mở không (dấu hiệu script bị thực thi). */
-    public boolean isAlertOpen() {
+    private String notifyTextOrNull() {
+        String text = currentNotifyText();
+        return text.isEmpty() ? null : text;
+    }
+
+    /** Chữ của thông báo nổi mới nhất đang có trên trang ("" nếu không có): đọc một lần bằng JS, không bị stale. */
+    private String currentNotifyText() {
+        return (String) WebUI.executeJS(JS_LATEST_NOTIFY);
+    }
+
+    /** Thông báo nổi mới nhất trang này từng hiện, theo bản chép của NOTIFY_RECORDER ("" nếu không có). */
+    private String recordedNotifyText() {
+        return (String) WebUI.executeJS(JS_RECORDED_NOTIFY);
+    }
+
+    /** Gọi trước hành động AJAX (trang không tải lại): thông báo đang hiện là của hành động trước, không tính nữa. */
+    protected void ignoreShownNotifies() {
+        WebUI.executeJS(JS_MARK_NOTIFIES_OLD);
+    }
+
+    /**
+     * Gửi form khi phiên đã hết có ra trang 419 PAGE EXPIRED không.
+     * Chờ tới khi ra 419 hoặc về /login rồi mới kết luận, vì ngay sau khi bấm Save có thể còn ở trang cũ.
+     */
+    public boolean isPageExpired() {
         try {
-            driver.switchTo().alert();
-            return true;
-        } catch (NoAlertPresentException e) {
+            WebUI.waitUntil("trang 419 hoặc trang đăng nhập",
+                    () -> showsExpiredPage() || WebUI.getCurrentURL().endsWith("/login"));
+        } catch (TimeoutException e) {
+            LogUtils.warn("Không ra 419, không về trang đăng nhập, đang ở {}", WebUI.getCurrentURL());
             return false;
         }
+        return showsExpiredPage();
+    }
+
+    private boolean showsExpiredPage() {
+        return EXPIRED_TITLE.equals(WebUI.getPageTitle()) && WebUI.checkElementExist(EXPIRED_MESSAGE);
     }
 
     /**
@@ -219,44 +196,44 @@ public abstract class BasePage {
      * hoặc trang 403 của tường lửa LiteSpeed ("Access to this resource on the server is denied!").
      */
     public boolean isServerErrorPage() {
-        String body = driver.findElement(By.tagName("body")).getText();
-        return driver.getTitle().contains("Server Error") || body.contains("Server Error")
+        String body = WebUI.getElementRawText(BODY);
+        return WebUI.getPageTitle().contains("Server Error") || body.contains("Server Error")
                 || body.contains("Something went wrong!") || body.contains("Access to this resource on the server is denied")
                 || body.isBlank();
     }
 
     /** Trang "Page Not Found!" của website (id không tồn tại). */
     public boolean isPageNotFound() {
-        return !driver.findElements(By.xpath("//h1[normalize-space()='Page Not Found!']")).isEmpty();
+        return WebUI.checkElementExist(NOT_FOUND_HEADING);
+    }
+
+    public boolean isAlertOpen() {
+        return WebUI.isAlertPresent();
     }
 
     public boolean hasNoHorizontalScroll() {
-        return Boolean.TRUE.equals(js("return document.documentElement.scrollWidth <= window.innerWidth;"));
+        return Boolean.TRUE.equals(WebUI.executeJS(JS_NO_HORIZONTAL_SCROLL));
     }
 
     /** Chờ tab mới (mở bằng target=_blank) xuất hiện rồi chuyển sang tab đó. */
     public void switchToNewWindow(String originalHandle) {
-        String handle = wait.until(d -> d.getWindowHandles().stream().filter(h -> !h.equals(originalHandle)).findFirst().orElse(null));
-        driver.switchTo().window(handle);
-        WaitHelper.waitForPageReady(driver);
+        WebUI.switchToNewWindow(originalHandle);
     }
 
-    /** Chờ jQuery không còn request AJAX nào đang chạy (trang không dùng jQuery thì bỏ qua). */
     public void waitForAjaxIdle() {
-        new WebDriverWait(driver, Duration.ofSeconds(ConfigReader.getInstance().getTimeout() * 4L)).until(d -> Boolean.TRUE.equals(
-                js("return !window.jQuery || window.jQuery.active === 0;")));
+        WebUI.waitForJQueryLoad();
     }
 
     /** Toàn bộ chữ đang hiện trên trang. */
     public String bodyText() {
-        return driver.findElement(By.tagName("body")).getText();
+        return WebUI.getElementRawText(BODY);
     }
 
     public String currentUrl() {
-        return driver.getCurrentUrl();
+        return WebUI.getCurrentURL();
     }
 
     public String currentPath() {
-        return (String) js("return location.pathname;");
+        return WebUI.getCurrentPath();
     }
 }

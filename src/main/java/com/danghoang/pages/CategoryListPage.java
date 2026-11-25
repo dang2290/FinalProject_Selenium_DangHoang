@@ -1,8 +1,9 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
 import java.util.List;
@@ -13,9 +14,8 @@ import java.util.stream.IntStream;
  * Cột: 1 # · 2 Name · 3 Parent Category · 4 Order Level · 5 Level · 6 Banner · 7 Icon · 8 Featured · 9 Commission · 10 Options.
  * Màn hẹp (≤ 1366): footable chỉ hiện Name, Options; dấu + ở ô Name mở hàng chi tiết.
  */
-public class CategoryListPage extends AdminListPage {
+public class CategoryListPage extends MainListPage {
 
-    private static final int COL_NAME = 2;
     private static final int COL_PARENT = 3;
     private static final int COL_ORDER_LEVEL = 4;
     private static final int COL_LEVEL = 5;
@@ -27,10 +27,10 @@ public class CategoryListPage extends AdminListPage {
     private static final By PAGE_TITLE = By.xpath("//h1[normalize-space()='All categories']");
     private static final By CARD_HEADERS = By.cssSelector(".card-header h5, .card-header h6");
     private static final By ADD_NEW_BUTTON = By.xpath("//a[contains(@href,'/admin/categories/create')][normalize-space()='Add New category']");
-    private static final By SIDEBAR_PRODUCTS = By.xpath("//a[contains(@class,'aiz-side-nav-link')][span[normalize-space()='Products']]");
     private static final By SIDEBAR_CATEGORY = By.cssSelector("a.aiz-side-nav-link[href$='/admin/categories']");
     private static final By CATEGORY_MENU_ACTIVE = By.cssSelector(".aiz-side-nav-link.active[href$='/admin/categories']");
 
+    private static final By CELL_IMAGE = By.tagName("img");
     private static final By ROW_FEATURED_INPUT = By.cssSelector("input[onchange^='update_featured']");
     private static final By ROW_FEATURED_SWITCH = By.cssSelector("label.aiz-switch");
     private static final By EXPAND_TOGGLE = By.cssSelector(".footable-toggle");
@@ -39,8 +39,8 @@ public class CategoryListPage extends AdminListPage {
     private static final By DETAIL_FEATURED_SWITCH = By.cssSelector("table tbody tr.footable-detail-row label.aiz-switch");
     private static final By DETAIL_FEATURED_INPUT = By.cssSelector("table tbody tr.footable-detail-row input[onchange^='update_featured']");
 
-    public CategoryListPage(WebDriver driver) {
-        super(driver);
+    public CategoryListPage() {
+        super(PAGE_TITLE);
     }
 
     @Step("Mở trang All categories")
@@ -58,59 +58,39 @@ public class CategoryListPage extends AdminListPage {
     /** Vào All categories từ sidebar: mở nhóm Products nếu đang thu gọn rồi bấm Category. */
     @Step("Bấm Products → Category ở sidebar")
     public CategoryListPage openFromSidebar() {
-        if (!isPresentNow(SIDEBAR_CATEGORY)) {
-            click(SIDEBAR_PRODUCTS);
-        }
-        andWaitForNewPage(() -> click(SIDEBAR_CATEGORY));
+        clickInProductsMenu(SIDEBAR_CATEGORY);
         return waitUntilLoaded();
     }
 
     /** Sidebar có nhóm Products chứa mục Category. */
     public boolean isCategoryInProductsMenu() {
-        if (!isPresentNow(SIDEBAR_CATEGORY)) {
-            click(SIDEBAR_PRODUCTS);
-        }
-        return isVisible(SIDEBAR_CATEGORY);
+        return isInProductsMenu(SIDEBAR_CATEGORY);
     }
 
     public CategoryListPage waitUntilLoaded() {
-        waitForVisible(PAGE_TITLE);
-        waitForTableReady();
+        waitForListTitle();
         return this;
     }
 
-    @Override
-    protected void waitForListTitle() {
-        waitUntilLoaded();
-    }
-
-    public boolean isTitleDisplayed() {
-        return isPresentNow(PAGE_TITLE);
-    }
-
     public List<String> cardHeaders() {
-        return texts(CARD_HEADERS);
+        return WebUI.getAllElementsText(CARD_HEADERS);
     }
 
     public boolean isAddNewButtonDisplayed() {
-        return isPresentNow(ADD_NEW_BUTTON);
+        return WebUI.isElementDisplayedNow(ADD_NEW_BUTTON);
     }
 
     public boolean isCategoryMenuActive() {
-        return isPresentNow(CATEGORY_MENU_ACTIVE);
+        return WebUI.isElementDisplayedNow(CATEGORY_MENU_ACTIVE);
     }
 
     @Step("Bấm Add New category")
     public CategoryFormPage clickAddNew() {
-        andWaitForNewPage(() -> click(ADD_NEW_BUTTON));
-        return new CategoryFormPage(driver).waitUntilLoaded();
+        andWaitForNewPage(() -> WebUI.clickElement(ADD_NEW_BUTTON));
+        return new CategoryFormPage().waitUntilLoaded();
     }
 
     // ---------- Đọc bảng ----------
-
-    public List<String> names() {
-        return columnTexts(COL_NAME);
-    }
 
     public List<Long> orderLevels() {
         return columnTexts(COL_ORDER_LEVEL).stream().map(Long::parseLong).toList();
@@ -118,12 +98,6 @@ public class CategoryListPage extends AdminListPage {
 
     public List<String> commissions() {
         return columnTexts(COL_COMMISSION);
-    }
-
-    /** Vị trí (từ 0) của dòng mang đúng tên này, -1 nếu không có. */
-    public int rowIndexOf(String name) {
-        List<String> names = names();
-        return IntStream.range(0, names.size()).filter(i -> names.get(i).equals(name)).findFirst().orElse(-1);
     }
 
     public String parentOf(int row) {
@@ -156,33 +130,33 @@ public class CategoryListPage extends AdminListPage {
 
     /** Ô Banner / Icon có ảnh thu nhỏ tải được (không phải "—", không phải ảnh lỗi). */
     public boolean hasLoadedImage(int row, boolean banner) {
-        WebElement cell = rows().get(row).findElement(By.xpath("./td[" + (banner ? COL_BANNER : COL_ICON) + "]"));
-        List<WebElement> images = cell.findElements(By.tagName("img"));
-        return !images.isEmpty() && Boolean.TRUE.equals(
-                js("const i=arguments[0];return i.complete && i.naturalWidth>0;", images.get(0)));
+        WebElement cell = WebUI.getWebElement(rows().get(row), By.xpath("./td[" + (banner ? COL_BANNER : COL_ICON) + "]"));
+        List<WebElement> images = WebUI.getWebElements(cell, CELL_IMAGE);
+        return !images.isEmpty() && WebUI.isImageLoaded(images.get(0));
     }
 
     public boolean isFeaturedOn(int row) {
-        return rows().get(row).findElement(ROW_FEATURED_INPUT).isSelected();
+        return WebUI.getWebElement(rows().get(row), ROW_FEATURED_INPUT).isSelected();
     }
 
     /** Mỗi dòng có công tắc Featured, nút bút chì và thùng rác. */
     public boolean everyRowHasFeaturedEditDelete() {
         return everyRowHasEditAndDelete()
-                && rows().stream().allMatch(r -> !r.findElements(ROW_FEATURED_INPUT).isEmpty());
+                && rows().stream().allMatch(r -> !WebUI.getWebElements(r, ROW_FEATURED_INPUT).isEmpty());
     }
 
     @Step("Bấm công tắc Featured ở dòng {row} (đếm từ 0)")
     public void toggleFeatured(int row) {
         boolean before = isFeaturedOn(row);
-        rows().get(row).findElement(ROW_FEATURED_SWITCH).click();
-        wait.until(d -> isFeaturedOn(row) != before);
+        ignoreShownNotifies();
+        WebUI.clickElement(WebUI.getWebElement(rows().get(row), ROW_FEATURED_SWITCH), "Featured, dòng " + row);
+        WebUI.waitUntil("Featured đổi trạng thái", () -> isFeaturedOn(row) != before);
     }
 
     @Step("Bấm nút bút chì ở dòng {row} (đếm từ 0)")
     public CategoryFormPage editRow(int row) {
         clickEditOfRow(row);
-        return new CategoryFormPage(driver).waitUntilLoaded();
+        return new CategoryFormPage().waitUntilLoaded();
     }
 
     /**
@@ -209,32 +183,33 @@ public class CategoryListPage extends AdminListPage {
     // ---------- Màn hẹp: hàng chi tiết footable ----------
 
     public boolean everyRowHasExpandToggle() {
-        return rows().stream().allMatch(r -> !r.findElements(EXPAND_TOGGLE).isEmpty());
+        return rows().stream().allMatch(r -> !WebUI.getWebElements(r, EXPAND_TOGGLE).isEmpty());
     }
 
     @Step("Bấm dấu +/− ở dòng {row} (đếm từ 0)")
     public void clickExpandToggle(int row) {
         boolean shownBefore = isDetailRowShown();
-        rows().get(row).findElement(EXPAND_TOGGLE).click();
-        wait.until(d -> isDetailRowShown() != shownBefore);
+        WebUI.clickElement(WebUI.getWebElement(rows().get(row), EXPAND_TOGGLE), "dấu +/−, dòng " + row);
+        WebUI.waitUntil("hàng chi tiết đổi trạng thái", () -> isDetailRowShown() != shownBefore);
     }
 
     public boolean isDetailRowShown() {
-        return isPresentNow(DETAIL_ROW);
+        return WebUI.isElementDisplayedNow(DETAIL_ROW);
     }
 
     public List<String> detailHeaders() {
-        return texts(DETAIL_HEADERS);
+        return WebUI.getAllElementsText(DETAIL_HEADERS);
     }
 
     public boolean isDetailFeaturedOn() {
-        return driver.findElement(DETAIL_FEATURED_INPUT).isSelected();
+        return WebUI.isElementSelected(DETAIL_FEATURED_INPUT);
     }
 
     @Step("Bấm công tắc Featured trong hàng chi tiết")
     public void toggleDetailFeatured() {
         boolean before = isDetailFeaturedOn();
-        click(DETAIL_FEATURED_SWITCH);
-        wait.until(d -> isDetailFeaturedOn() != before);
+        ignoreShownNotifies();
+        WebUI.clickElement(DETAIL_FEATURED_SWITCH);
+        WebUI.waitUntil("Featured ở hàng chi tiết đổi trạng thái", () -> isDetailFeaturedOn() != before);
     }
 }

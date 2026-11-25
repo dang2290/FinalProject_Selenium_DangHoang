@@ -1,8 +1,12 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.AttributeDetailPage;
 import com.danghoang.pages.AttributeEditPage;
 import com.danghoang.pages.AttributeListPage;
+import com.danghoang.pages.AttributeListPage.RowButton;
+import com.danghoang.pages.DashboardPage;
 import com.danghoang.pages.LoginPage;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
@@ -34,12 +38,11 @@ public class AttributeListTest extends AttributeTestBase {
     @Description("Kiểm tra vào All Attributes từ sidebar Products → Attribute thì đúng URL, tiêu đề, mục Attribute tô sáng, thẻ Attributes và Add New Attribute, 4 cột đúng thứ tự, giá trị hiện dạng nhãn, mỗi dòng 3 nút, form có Name rỗng và nút Save.")
     public void testAllAttributesPageElements() {
         tc("AEC_ATTR_TC_001", "smoke", "attribute", "auth", "ui");
-        loginAsAdmin();
-        AttributeListPage list = new AttributeListPage(driver());
+        DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Ở sidebar bấm Products → Attribute", list::openFromSidebar);
+        AttributeListPage list = act("Ở sidebar bấm Products → Attribute", dashboard::goToAttributes);
 
-        Allure.step("Assert: Bảng kiểm màn All Attributes", () -> {
+        verify("Bảng kiểm màn All Attributes", () -> {
             SoftAssert soft = new SoftAssert();
             soft.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/attributes", "Thanh địa chỉ");
             soft.assertTrue(list.isTitleDisplayed(), "(1) Tiêu đề All Attributes");
@@ -68,12 +71,12 @@ public class AttributeListTest extends AttributeTestBase {
         tc("AEC_ATTR_TC_004", "smoke", "attribute", "auth");
         Allure.parameter("Biến thể", variant + " — " + entry);
         loginAsAdmin();
-        AttributeListPage list = new AttributeListPage(driver());
+        AttributeListPage list = new AttributeListPage();
         if (entry.endsWith("Page")) {
             String name = "AutoAttr_" + newToken("TC004" + variant);
             createAttribute(list, name);
-            Allure.step("Arrange: Mở trang " + entry + " của thuộc tính test", () -> {
-                int row = findRow(list, name);
+            arrange("Mở trang " + entry + " của thuộc tính test", () -> {
+                int row = list.findRow(name);
                 if ("editPage".equals(entry)) {
                     list.editRow(row);
                 } else {
@@ -82,7 +85,7 @@ public class AttributeListTest extends AttributeTestBase {
             });
         }
 
-        Allure.step("Act: Vào trang theo lối " + entry, () -> {
+        act("Vào trang theo lối " + entry, () -> {
             if ("url".equals(entry)) {
                 list.open();
             } else {
@@ -90,7 +93,7 @@ public class AttributeListTest extends AttributeTestBase {
             }
         });
 
-        Allure.step("Assert: Màn All Attributes, mục Attribute tô sáng, đúng URL", () -> {
+        verify("Màn All Attributes, mục Attribute tô sáng, đúng URL", () -> {
             Assert.assertTrue(list.isTitleDisplayed(), "Tiêu đề All Attributes");
             Assert.assertEquals(list.cardHeaders(), List.of("Attributes", "Add New Attribute"), "Bảng và form Add New Attribute");
             Assert.assertTrue(list.isAttributeMenuActive(), "Mục Attribute ở sidebar phải được tô sáng");
@@ -105,7 +108,7 @@ public class AttributeListTest extends AttributeTestBase {
         tc("AEC_ATTR_TC_009", "regression", "attribute", "auth");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Assert: Cột # từ 1 tới tổng số dòng, không phân trang, không ô tìm", () -> {
+        verify("Cột # từ 1 tới tổng số dòng, không phân trang, không ô tìm", () -> {
             List<Integer> numbers = list.rowNumbers();
             Allure.parameter("Số dòng", numbers.size());
             Assert.assertEquals(numbers, IntStream.rangeClosed(1, numbers.size()).boxed().toList(), "Cột # phải liên tục từ 1");
@@ -131,44 +134,44 @@ public class AttributeListTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
         if (withValues) {
-            Allure.step("Arrange: Thêm 2 giá trị", () -> {
+            arrange("Thêm 2 giá trị", () -> {
                 AttributeDetailPage detail = openDetailOf(list, name);
                 values.forEach(detail::addValue);
             });
         }
 
-        Allure.step("Assert: Cột Values ở dòng thuộc tính test", () ->
-                Assert.assertEquals(list.valuesOf(findRow(list, name)), values, "Nhãn ở cột Values"));
+        verify("Cột Values ở dòng thuộc tính test", () ->
+                Assert.assertEquals(list.valuesOf(list.findRow(name)), values, "Nhãn ở cột Values"));
     }
 
     @DataProvider(name = "rowButtons", parallel = true)
     public Object[][] rowButtons() {
-        return new Object[][]{{"a", 0, "Attribute values"}, {"b", 1, "Edit"}, {"c", 2, "Delete"}};
+        return new Object[][]{{"a", RowButton.VALUES, "Attribute values"}, {"b", RowButton.EDIT, "Edit"}, {"c", RowButton.DELETE, "Delete"}};
     }
 
     @Test(dataProvider = "rowButtons", groups = {"regression", "attribute", "auth"}, description = "Ba nút thao tác trên dòng mở đúng màn hình")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra 3 nút tròn trên dòng: Attribute values mở Attribute Detail, Edit mở Attribute Information, Delete mở hộp xác nhận mà không đổi URL (bấm Cancel để đóng).")
-    public void testRowButtons(String variant, int button, String title) {
+    public void testRowButtons(String variant, RowButton button, String title) {
         tc("AEC_ATTR_TC_011", "regression", "attribute", "auth");
         Allure.parameter("Biến thể", variant + " — " + title);
         String name = "AutoAttr_" + newToken("TC011" + variant);
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
-        int row = findRow(list, name);
+        int row = list.findRow(name);
 
-        Allure.step("Assert: Rê chuột lên nút thứ " + (button + 1) + " hiện " + title, () ->
+        verify("Rê chuột lên nút thứ " + (button.ordinal() + 1) + " hiện " + title, () ->
                 Assert.assertEquals(list.hoverRowButton(row, button), title, "Chú thích nút"));
 
-        Allure.step("Act + Assert: Bấm nút " + title, () -> {
+        actAndVerify("Bấm nút " + title, () -> {
             String before = list.currentUrl();
             switch (button) {
-                case 0 -> {
+                case VALUES -> {
                     AttributeDetailPage detail = list.openValuesOfRow(row);
                     Assert.assertTrue(detail.currentUrl().matches(".*/admin/attributes/\\d+$"), "Thanh địa chỉ: " + detail.currentUrl());
                     Assert.assertTrue(detail.isTitleDisplayed(), "Phải mở Attribute Detail");
                 }
-                case 1 -> {
+                case EDIT -> {
                     AttributeEditPage edit = list.editRow(row);
                     Assert.assertTrue(edit.currentUrl().matches(".*/admin/attributes/edit/\\d+\\?lang=en$"), "Thanh địa chỉ: " + edit.currentUrl());
                     Assert.assertTrue(edit.isTitleDisplayed(), "Phải mở Attribute Information");
@@ -196,11 +199,11 @@ public class AttributeListTest extends AttributeTestBase {
     public void testAttributePagesRequireLogin(String variant, String path) {
         tc("AEC_ATTR_TC_035", "regression", "attribute", "security");
         Allure.parameter("Biến thể", variant + " — " + path);
-        LoginPage loginPage = new LoginPage(driver());
+        LoginPage loginPage = new LoginPage();
 
-        Allure.step("Act: Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
+        act("Mở " + path + " khi chưa đăng nhập", () -> browser().openPath(path));
 
-        Allure.step("Assert: Về trang đăng nhập", () -> {
+        verify(StepNames.BACK_AT_LOGIN, () -> {
             loginPage.waitForPath("/login");
             Assert.assertEquals(loginPage.currentPath(), "/login", "Phải chuyển về /login");
             Assert.assertTrue(loginPage.isHeadingDisplayed(), "Phải thấy form đăng nhập");
@@ -216,9 +219,9 @@ public class AttributeListTest extends AttributeTestBase {
         String name = "AutoAttrKb_" + newToken("TC040a");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: Gõ Name rồi nhấn Enter", () -> list.createByEnter(name));
+        act("Gõ Name rồi nhấn Enter", () -> list.createByEnter(name));
 
-        Allure.step("Assert: Tạo thành công, thuộc tính mới ở đầu bảng", () -> {
+        verify("Tạo thành công, thuộc tính mới ở đầu bảng", () -> {
             Assert.assertEquals(list.getNotifyMessage(), INSERTED, "Thông báo sau khi nhấn Enter");
             int row = list.rowIndexOf(name);
             Assert.assertTrue(row >= 0 && row < TOP_ROWS, "Thuộc tính mới phải ở đầu bảng, thực tế dòng " + (row + 1));
@@ -233,9 +236,9 @@ public class AttributeListTest extends AttributeTestBase {
         Allure.parameter("Biến thể", "b — Tab");
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Assert: Tab từ ô Name tới Save", () ->
+        verify("Tab từ ô Name tới Save", () ->
                 Assert.assertEquals(list.tabSequenceFromName(1), List.of("Save"), "Phần tử nhận focus sau Tab"));
-        Allure.step("Assert: Ô Name và nút Save có viền khi được focus", () -> {
+        verify("Ô Name và nút Save có viền khi được focus", () -> {
             Assert.assertEquals(list.fieldsWithoutVisibleFocus(), List.of(), "Ô không đổi gì khi được focus");
             Assert.assertTrue(list.saveShowsFocusWhenTabbed(), "Nút Save phải đổi kiểu khi được focus bằng Tab");
         });
@@ -251,23 +254,18 @@ public class AttributeListTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
 
-        Allure.step("Act: Mở hộp xoá của thuộc tính test, nhấn Esc", () -> {
-            list.openDeleteOfRow(findRow(list, name));
+        act("Mở hộp xoá của thuộc tính test, nhấn Esc", () -> {
+            list.openDeleteOfRow(list.findRow(name));
             list.closeDeleteModal(AttributeListPage.CloseBy.ESC);
         });
 
-        Allure.step("Assert: Hộp đóng, thuộc tính còn nguyên", () -> {
+        verify("Hộp đóng, thuộc tính còn nguyên", () -> {
             Assert.assertTrue(list.waitDeleteModalClosed(), "Hộp Delete Confirmation phải đóng");
-            Assert.assertTrue(findRow(list, name) >= 0, "Thuộc tính test phải còn");
+            Assert.assertTrue(list.findRow(name) >= 0, "Thuộc tính test phải còn");
         });
     }
 
-    @DataProvider(name = "windowSizes", parallel = true)
-    public Object[][] windowSizes() {
-        return new Object[][]{{"a", 1920, 1080}, {"b", 1366, 768}};
-    }
-
-    @Test(dataProvider = "windowSizes", groups = {"regression", "attribute", "auth", "responsive"},
+    @Test(dataProvider = "windowSizes", dataProviderClass = DataProviderFactory.class, groups = {"regression", "attribute", "auth", "responsive"},
             description = "Trang All Attributes dùng được ở màn rộng và màn hẹp")
     @Severity(SeverityLevel.NORMAL)
     @Description("Kiểm tra ở 1920×1080: bảng và form cạnh nhau, đủ 4 cột, không cuộn ngang; ở 1366×768: đọc được tên, 3 nút thao tác và form Name + Save. Phần chữ đè nhau kiểm tay (Partial).")
@@ -275,14 +273,14 @@ public class AttributeListTest extends AttributeTestBase {
         tc("AEC_ATTR_TC_041", "regression", "attribute", "auth", "responsive");
         Allure.parameter("Biến thể", variant + " — " + width + "×" + height);
         loginAsAdmin();
-        AttributeListPage list = new AttributeListPage(driver());
+        AttributeListPage list = new AttributeListPage();
 
-        Allure.step("Act: Đặt cửa sổ " + width + "×" + height + " rồi mở All Attributes", () -> {
+        act("Đặt cửa sổ " + width + "×" + height + " rồi mở All Attributes", () -> {
             browser().resize(width, height);
             list.open();
         });
 
-        Allure.step("Assert: Bố cục dùng được", () -> {
+        verify("Bố cục dùng được", () -> {
             Assert.assertEquals(list.cardHeaders(), List.of("Attributes", "Add New Attribute"), "Bảng và form");
             Assert.assertTrue(list.names().stream().limit(15).noneMatch(String::isBlank), "Tên thuộc tính phải đọc được");
             Assert.assertTrue(list.everyRowHasThreeButtons(), "Mỗi dòng phải có 3 nút thao tác");
@@ -300,15 +298,15 @@ public class AttributeListTest extends AttributeTestBase {
     public void testListLoadTime() {
         tc("AEC_ATTR_TC_042", "regression", "attribute", "performance", "auth");
         loginAsAdmin();
-        AttributeListPage list = new AttributeListPage(driver());
+        AttributeListPage list = new AttributeListPage();
 
-        Duration load = Allure.step("Act: Mở danh sách, bấm giờ tới khi bảng hiện đủ", () -> {
+        Duration load = act("Mở danh sách, bấm giờ tới khi bảng hiện đủ", () -> {
             long start = System.nanoTime();
             list.open();
             return Duration.ofNanos(System.nanoTime() - start);
         });
 
-        Allure.step("Assert: Bảng hiện đủ trong ≤ 3 giây", () -> {
+        verify("Bảng hiện đủ trong ≤ 3 giây", () -> {
             Allure.parameter("Thời gian (ms)", load.toMillis());
             Assert.assertTrue(list.rowCount() > 0, "Bảng phải có dữ liệu");
             Assert.assertTrue(load.compareTo(MAX_LOAD) <= 0, "Mở danh sách mất " + load.toMillis() + " ms");

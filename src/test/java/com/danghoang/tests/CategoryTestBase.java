@@ -1,16 +1,9 @@
 package com.danghoang.tests;
 
-import com.danghoang.base.BaseTest;
 import com.danghoang.pages.CategoryFormPage;
 import com.danghoang.pages.CategoryListPage;
-import com.danghoang.utils.TestDataGenerator;
-import io.qameta.allure.Allure;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.testng.Assert;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -18,7 +11,7 @@ import java.util.function.Consumer;
  * PC-1 đăng nhập · PC-2 tạo danh mục test · PC-3 dọn danh mục test, cấp sâu nhất trước (cháu → con → cha).
  * PC-4: chỉ tìm và đụng danh mục chứa mã truy vết của test — không bao giờ chạm 4541–4543 (kẹt vòng lặp cha–con).
  */
-abstract class CategoryTestBase extends BaseTest {
+abstract class CategoryTestBase extends TrackedDataTestBase {
 
     protected static final String INSERTED = "Category has been inserted successfully";
     protected static final String UPDATED = "Category has been updated successfully";
@@ -27,26 +20,16 @@ abstract class CategoryTestBase extends BaseTest {
     protected static final String NO_PARENT = "No Parent";
     protected static final String EMPTY_CELL = "—";
 
-    private static final Logger LOG = LogManager.getLogger(CategoryTestBase.class);
-    private final ThreadLocal<List<String>> tokens = ThreadLocal.withInitial(ArrayList::new);
-
-    /** Mã truy vết cho dữ liệu của test — danh mục chứa mã này sẽ bị xoá khi test kết thúc. */
-    protected String newToken(String testName) {
-        String token = TestDataGenerator.token(testName);
-        tokens.get().add(token);
-        return token;
-    }
-
     /** PC-1: đăng nhập admin rồi mở All categories. */
     protected CategoryListPage openCategoriesAsAdmin() {
         loginAsAdmin();
-        return Allure.step("Arrange: Mở trang All categories", () -> new CategoryListPage(driver()).open());
+        return arrange("Mở trang All categories", () -> new CategoryListPage().open());
     }
 
     /** PC-2: tạo danh mục bằng form Add New category; extra điền thêm các ô khác trước khi Save. */
     protected void createCategory(String name, Consumer<CategoryFormPage> extra) {
-        Allure.step("Arrange: Tạo danh mục test " + name, () -> {
-            CategoryFormPage form = new CategoryFormPage(driver()).openCreate();
+        arrange("Tạo danh mục test " + name, () -> {
+            CategoryFormPage form = new CategoryFormPage().openCreate();
             form.enterName(name);
             extra.accept(form);
             form.saveAndWait();
@@ -62,17 +45,10 @@ abstract class CategoryTestBase extends BaseTest {
         createCategory(name, form -> form.chooseParent(parentName));
     }
 
-    /** Tìm danh mục theo tên đầy đủ, trả về vị trí dòng mang đúng tên đó (-1 nếu không có). */
-    protected int findRow(CategoryListPage list, String name) {
-        list.open();
-        list.search(name);
-        return list.rowIndexOf(name);
-    }
-
     /** Tìm danh mục test rồi mở form sửa của nó. */
     protected CategoryFormPage openEditOf(CategoryListPage list, String name) {
-        return Allure.step("Arrange: Mở form sửa của " + name, () -> {
-            int row = findRow(list, name);
+        return arrange("Mở form sửa của " + name, () -> {
+            int row = list.findRow(name);
             Assert.assertTrue(row >= 0, "Phải tìm thấy danh mục test " + name);
             return list.editRow(row);
         });
@@ -80,23 +56,13 @@ abstract class CategoryTestBase extends BaseTest {
 
     @Override
     protected void cleanUpTestData() {
-        List<String> created = new ArrayList<>(tokens.get());
-        tokens.remove();
-        for (String token : created) {
-            try {
-                Allure.step("Dọn dữ liệu: xoá danh mục chứa " + token, () -> deleteCategoriesContaining(token));
-            } catch (RuntimeException e) {
-                LOG.warn("Không dọn được danh mục chứa {} — cần xoá tay", token, e);
-            }
+        for (String token : takeTokens()) {
+            runCleanup("xoá danh mục chứa " + token, () -> deleteCategoriesContaining(token));
         }
     }
 
     private void deleteCategoriesContaining(String token) {
         dismissAlertIfOpen();
-        new CategoryListPage(driver()).deleteAllContaining(token);
-    }
-
-    private void dismissAlertIfOpen() {
-        browser().dismissAlertIfOpen();
+        new CategoryListPage().deleteAllContaining(token);
     }
 }

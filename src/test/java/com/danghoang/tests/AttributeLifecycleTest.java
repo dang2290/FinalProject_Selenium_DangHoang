@@ -1,8 +1,10 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
 import com.danghoang.pages.AttributeDetailPage;
 import com.danghoang.pages.AttributeEditPage;
 import com.danghoang.pages.AttributeListPage;
+import com.danghoang.pages.AttributeListPage.RowButton;
 import com.danghoang.pages.CategoryFormPage;
 import com.danghoang.pages.CategoryListPage;
 import com.danghoang.pages.ProductCreatePage;
@@ -36,28 +38,28 @@ public class AttributeLifecycleTest extends AttributeTestBase {
         String name = "AutoAttr_" + newToken("TC008");
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
-        int row = findRow(list, name);
+        int row = list.findRow(name);
         String detailUrl = list.detailUrlOfRow(row);
 
-        Allure.step("Assert: Rê chuột lên nút thứ ba hiện Delete", () ->
-                Assert.assertEquals(list.hoverRowButton(row, 2), "Delete", "Chú thích nút"));
+        verify("Rê chuột lên nút thứ ba hiện Delete", () ->
+                Assert.assertEquals(list.hoverRowButton(row, RowButton.DELETE), "Delete", "Chú thích nút"));
 
-        Allure.step("Act: Bấm nút Delete", () -> list.openDeleteOfRow(row));
-        Allure.step("Assert: Hộp xác nhận đúng nội dung, URL không đổi", () -> {
+        act(StepNames.CLICK_DELETE, () -> list.openDeleteOfRow(row));
+        verify("Hộp xác nhận đúng nội dung, URL không đổi", () -> {
             Assert.assertEquals(list.deleteModalTitle(), "Delete Confirmation", "Tiêu đề hộp");
             Assert.assertEquals(list.deleteModalText(), "Are you sure to delete this?", "Câu hỏi xác nhận");
             Assert.assertEquals(list.deleteModalButtons(), List.of("Cancel", "Delete"), "Nút trong hộp");
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/attributes", "Thanh địa chỉ không được đổi");
         });
 
-        Allure.step("Act: Bấm Delete", list::confirmDelete);
-        Allure.step("Assert: Xoá thành công, không còn dòng thuộc tính", () -> {
+        act(StepNames.CLICK_DELETE, list::confirmDelete);
+        verify("Xoá thành công, không còn dòng thuộc tính", () -> {
             Assert.assertEquals(list.getNotifyMessage(), DELETED, "Thông báo sau khi xoá");
             Assert.assertEquals(list.currentUrl(), config.getBaseUrl() + "/admin/attributes", "Thanh địa chỉ");
             Assert.assertEquals(list.rowIndexOf(name), -1, "Không được còn dòng mang tên thuộc tính");
         });
 
-        Allure.step("Assert: Trang Attribute Detail cũ báo không tìm thấy", () -> {
+        verify("Trang Attribute Detail cũ báo không tìm thấy", () -> {
             browser().openUrl(detailUrl);
             Assert.assertTrue(list.isPageNotFound(), "Phải hiện Page Not Found!");
         });
@@ -72,15 +74,15 @@ public class AttributeLifecycleTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
 
-        Allure.step("Act: Bấm nút Delete ở dòng thuộc tính test", () -> list.openDeleteOfRow(findRow(list, name)));
-        Allure.step("Assert: Hộp xác nhận hiện câu hỏi", () ->
+        act("Bấm Delete ở dòng thuộc tính test", () -> list.openDeleteOfRow(list.findRow(name)));
+        verify("Hộp xác nhận hiện câu hỏi", () ->
                 Assert.assertEquals(list.deleteModalText(), "Are you sure to delete this?", "Câu hỏi xác nhận"));
 
-        Allure.step("Act: Bấm Cancel", () -> list.closeDeleteModal(AttributeListPage.CloseBy.CANCEL));
-        Allure.step("Assert: Hộp đóng, vẫn ở danh sách, thuộc tính còn", () -> {
+        act(StepNames.CLICK_CANCEL, () -> list.closeDeleteModal(AttributeListPage.CloseBy.CANCEL));
+        verify("Hộp đóng, vẫn ở danh sách, thuộc tính còn", () -> {
             Assert.assertTrue(list.waitDeleteModalClosed(), "Hộp phải đóng");
             Assert.assertTrue(list.isTitleDisplayed(), "Phải vẫn ở trang danh sách");
-            Assert.assertTrue(findRow(list, name) >= 0, "Thuộc tính test phải còn");
+            Assert.assertTrue(list.findRow(name) >= 0, "Thuộc tính test phải còn");
         });
     }
 
@@ -96,26 +98,25 @@ public class AttributeLifecycleTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, attribute);
 
-        Allure.step("Arrange: Tạo danh mục test chọn thuộc tính test ở Filtering Attributes", () -> {
-            CategoryFormPage form = new CategoryFormPage(driver()).openCreate();
+        arrange("Tạo danh mục test chọn thuộc tính test ở Filtering Attributes", () -> {
+            CategoryFormPage form = new CategoryFormPage().openCreate();
             form.enterName(category);
             form.chooseAttribute(attribute);
             form.saveAndWait();
         });
 
-        Allure.step("Act: Xoá thuộc tính test qua hộp xác nhận", () -> {
+        act("Xoá thuộc tính test qua hộp xác nhận", () -> {
             list.open();
             list.deleteRow(list.rowIndexOf(attribute));
         });
-        Allure.step("Assert: Xoá thành công, không còn dòng thuộc tính", () -> {
+        verify("Xoá thành công, không còn dòng thuộc tính", () -> {
             Assert.assertEquals(list.getNotifyMessage(), DELETED, "Thông báo sau khi xoá");
             Assert.assertEquals(list.rowIndexOf(attribute), -1, "Không được còn dòng thuộc tính");
         });
 
-        Allure.step("Assert: Trang sửa danh mục mở bình thường, Filtering Attributes về Nothing selected", () -> {
-            CategoryListPage categories = new CategoryListPage(driver()).open();
-            categories.search(category);
-            int row = categories.rowIndexOf(category);
+        verify("Trang sửa danh mục mở bình thường, Filtering Attributes về Nothing selected", () -> {
+            CategoryListPage categories = new CategoryListPage();
+            int row = categories.findRow(category);
             Assert.assertTrue(row >= 0, "Phải tìm thấy danh mục test");
             CategoryFormPage edit = categories.editRow(row);
             Assert.assertFalse(edit.isServerErrorPage(), "Không được ra trang lỗi");
@@ -140,12 +141,12 @@ public class AttributeLifecycleTest extends AttributeTestBase {
         AttributeListPage list = openAttributesAsAdmin();
         createAttribute(list, name);
 
-        List<String> found = Allure.step("Act: Mở form " + form + ", gõ tên thuộc tính vào ô chọn", () ->
+        List<String> found = act("Mở form " + form + ", gõ tên thuộc tính vào ô chọn", () ->
                 "category".equals(form)
-                        ? new CategoryFormPage(driver()).openCreate().searchAttributes(name)
-                        : new ProductCreatePage(driver()).open().searchVariationAttributes(name));
+                        ? new CategoryFormPage().openCreate().searchAttributes(name)
+                        : new ProductCreatePage().open().variation().searchVariationAttributes(name));
 
-        Allure.step("Assert: Ô chọn liệt kê thuộc tính test", () ->
+        verify("Ô chọn liệt kê thuộc tính test", () ->
                 Assert.assertEquals(found, List.of(name), "Kết quả trong ô chọn"));
     }
 
@@ -160,28 +161,27 @@ public class AttributeLifecycleTest extends AttributeTestBase {
         List<String> values = List.of("AutoVal_S_" + token, "AutoVal_M_" + token);
         AttributeListPage list = openAttributesAsAdmin();
 
-        Allure.step("Act: (1) Tạo thuộc tính", () -> createAttribute(list, name));
+        act("(1) Tạo thuộc tính", () -> createAttribute(list, name));
 
-        Allure.step("Act: (2) Thêm 2 giá trị", () -> {
+        act("(2) Thêm 2 giá trị", () -> {
             AttributeDetailPage detail = openDetailOf(list, name);
             for (String value : values) {
                 detail.addValue(value);
                 Assert.assertEquals(detail.getNotifyMessage(), VALUE_INSERTED, "Thêm giá trị " + value);
             }
         });
-        Allure.step("Assert: (3) Cột Values hiện 2 nhãn", () ->
-                Assert.assertEquals(list.valuesOf(findRow(list, name)), values, "Cột Values"));
+        verify("(3) Cột Values hiện 2 nhãn", () ->
+                Assert.assertEquals(list.valuesOf(list.findRow(name)), values, "Cột Values"));
 
-        Allure.step("Act: (4) Đổi tên", () -> {
+        act("(4) Đổi tên", () -> {
             AttributeEditPage edit = openEditOf(list, name);
-            edit.enterName(renamed);
-            edit.saveAndWait();
+            edit.saveWithName(renamed);
             Assert.assertEquals(edit.getNotifyMessage(), UPDATED, "Thông báo đổi tên");
         });
-        Allure.step("Assert: (5) Dòng mang tên mới, vẫn đủ 2 nhãn", () ->
-                Assert.assertEquals(list.valuesOf(findRow(list, renamed)), values, "Cột Values sau khi đổi tên"));
+        verify("(5) Dòng mang tên mới, vẫn đủ 2 nhãn", () ->
+                Assert.assertEquals(list.valuesOf(list.findRow(renamed)), values, "Cột Values sau khi đổi tên"));
 
-        Allure.step("Act: (6) Xoá lần lượt 2 giá trị", () -> {
+        act("(6) Xoá lần lượt 2 giá trị", () -> {
             AttributeDetailPage detail = openDetailOf(list, renamed);
             for (int i = 0; i < values.size(); i++) {
                 detail.deleteRow(0);
@@ -190,8 +190,8 @@ public class AttributeLifecycleTest extends AttributeTestBase {
             Assert.assertTrue(detail.isNothingFoundShown(), "Bảng giá trị phải Nothing found");
         });
 
-        Allure.step("Act: (7) Xoá thuộc tính", () -> list.deleteRow(findRow(list, renamed)));
-        Allure.step("Assert: (7) Xoá thành công, không còn dòng", () -> {
+        act("(7) Xoá thuộc tính", () -> list.deleteRow(list.findRow(renamed)));
+        verify("(7) Xoá thành công, không còn dòng", () -> {
             Assert.assertEquals(list.getNotifyMessage(), DELETED, "Thông báo xoá thuộc tính");
             Assert.assertEquals(list.rowIndexOf(renamed), -1, "Không được còn dòng mang tên mới");
         });

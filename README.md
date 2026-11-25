@@ -82,7 +82,10 @@ Toàn bộ output nằm trong `reports/` (đã `.gitignore`): `allure-results/`,
 ├── pom.xml · testng.xml · .env.example · mvnw · .github/workflows/selenium.yml
 ├── src/main/java/com/danghoang/
 │   ├── config/ConfigReader.java       đọc cấu hình
-│   ├── drivers/DriverFactory.java     WebDriver theo thread
+│   ├── drivers/                      DriverFactory (tạo), DriverManager (giữ theo thread)
+│   ├── helpers/                      PropertiesHelper, ExcelHelper
+│   ├── keywords/WebUI.java          lớp chung DUY NHẤT gọi Selenium: chờ, step, log
+│   ├── reporting/                    AllureManager, AllureLogListener (step → log), TestLogCollector (log riêng từng test)
 │   ├── pages/                         Page Object: BasePage, StorefrontPage, LoginPage, CustomerLoginPage,
 │   │                                  RegistrationPage, ForgotPasswordPage, DashboardPage, AdminListPage, BrandPage,
 │   │                                  BrandEditPage, MediaLibraryModal, ProductCreatePage, BootstrapSelect,
@@ -90,13 +93,18 @@ Toàn bộ output nằm trong `reports/` (đã `.gitignore`): `allure-results/`,
 │   │                                  AttributeEditPage, AttributeDetailPage, AttributeValueEditPage,
 │   │                                  ColorListPage, ColorEditPage, ProductListPage, ProductEditPage,
 │   │                                  DigitalProductListPage, DigitalProductFormPage, ProductBulkUploadPage,
-│   │                                  StorefrontProductPage, StorefrontListingPage
-│   └── utils/                         WaitHelper, TestDataGenerator, ScreenshotUtil, JsonDataReader
+│   │                                  StorefrontProductPage, StorefrontListingPage, BrowserWindow
+│   │                                  · lớp cha của form: AdminFormPage, TranslatableFormPage · lớp cha của danh sách chính: MainListPage
+│   │                                  · khối của form sản phẩm: ProductVariationSection, ProductPricingSection, ProductShippingSection
+│   │                                  · khai chung: AdminLocators (locator dùng nhiều trang), FormField (tên ô của form)
+│   └── utils/                         LogUtils, TestDataGenerator, ScreenshotUtil, JsonDataReader, EnvReferenceData
 ├── src/main/resources/log4j2.xml      log ghi vào reports/logs/
 ├── src/test/java/com/danghoang/
-│   ├── base/BaseTest.java             mở/đóng driver, đính ảnh cuối mọi test, đăng nhập admin
+│   ├── base/                         BaseTest (vòng đời, arrange / act / verify), StepNames, ClassReferences (đọc bytecode)
+│   ├── dataproviders/                DataProviderFactory (Excel, JSON, data dùng chung)
+│   ├── listeners/TestListener.java   trạng thái, ảnh cuối, nhật ký, reports/test-summary.md
 │   └── tests/                         AdminLoginTest, CustomerLoginTest, RegistrationTest,
-│                                      ForgotPasswordTest, SessionTest, BrandTestBase,
+│                                      ForgotPasswordTest, SessionTest, TrackedDataTestBase, BrandTestBase,
 │                                      BrandTest, BrandEditTest, BrandValidationTest, BrandListTest,
 │                                      CategoryTestBase, CategoryTest, CategoryFormTest, CategoryListTest,
 │                                      AttributeTestBase, AttributeListTest, AttributeCreateTest,
@@ -104,20 +112,26 @@ Toàn bộ output nằm trong `reports/` (đã `.gitignore`): `allure-results/`,
 │                                      ColorTestBase, ColorListTest, ColorCreateTest, ColorEditTest,
 │                                      ColorLifecycleTest, ProductTestBase, ProductListTest,
 │                                      ProductCreateTest, ProductPriceVariantTest, ProductEditTest,
-│                                      DigitalBulkProductTest, ProductCrossModuleTest
+│                                      DigitalBulkProductTest, ProductCrossModuleTest,
+│                                      ArchitectureTest (gác ranh giới POM)
 ├── src/test/resources/testdata/       dữ liệu data-driven (JSON)
 └── docs/                              requirements, manual TC, kết quả chạy tay
 ```
 
 ## Quy ước
 
+- **Không đặt `@Step` trên method nhận mật khẩu / token**: Allure ghi mọi tham số vào JSON (kể cả `MASKED`). Dùng `Allure.step("tên", () -> ...)` bên trong method.
 | Hạng mục | Quy ước |
 |---|---|
+| Liên kết trang | Hàm chuyển trang trả về Page đích. Thao tác ghép nhiều bước là hàm của Page (`searchFor`, `findRow`, `saveWithName`, `create...`), test không tự ghép |
 | Page class | `<Tên>Page`, locator `private static final By` trong class, method thao tác có `@Step` tiếng Việt |
 | Test class | `<Tên>Test`, method `test<HànhVi>`, assertion chỉ nằm trong test |
 | Metadata | `description` = tên test tiếng Việt · `@Description` · `@Severity` · `@Feature`/`@Story` · `Allure.label("testId", "<TC ID trong docs/testcases>")` |
-| Thân test | Bọc trong `Allure.step("Arrange: …")` / `Act:` / `Assert:` |
-| Chờ | Chỉ `WebDriverWait` + `ExpectedConditions` — cấm `Thread.sleep` |
+| Thân test | `arrange(...)` / `act(...)` / `verify(...)` của BaseTest, tên lặp lấy ở `StepNames`. Không gọi `Allure.step` trong test |
+| Thao tác, chờ | Page gọi `WebUI.xxx(...)` static, tạo bằng `new LoginPage()` không truyền driver. Cấm gọi driver / click / gõ ngoài WebUI (`ArchitectureTest` tự kiểm), cấm `Thread.sleep` |
+| Cấu hình | `-D` → biến môi trường → `.env` → `configs/<TEST_ENV>.properties` → `configs/config.properties`. Bí mật chỉ ở `.env` |
+| Log | Không viết log cho thao tác: tạo step, log tự sinh cùng câu chữ. Xem chi tiết hơn: `-Dlog.level=debug` |
+| Trạng thái | `reports/test-summary.md`: PASS, PASS_KNOWN_ISSUE, FAIL, FAIL_KNOWN_ISSUE, BROKEN, SKIP |
 | Dữ liệu | `TestDataGenerator` sinh tên unique `<Prefix>_<TC>_<epoch>_<hex>` — truy ngược được test nào tạo |
 | Môi trường dùng chung | Chỉ tạo, sửa, xoá bản ghi do chính test tạo; dọn ngay trong test |
 
@@ -125,6 +139,7 @@ Toàn bộ output nằm trong `reports/` (đã `.gitignore`): `allure-results/`,
 
 | Class | TC ID (`docs/testcases/`) | Cần đăng nhập |
 |---|---|---|
+| `ArchitectureTest` | `ARCH_POM_001–002`: kiểm kiến trúc, không có manual TC, không mở trình duyệt | Không |
 | `AdminLoginTest` | `AEC_LOGIN_TC_001, 002, 008, 009, 010a, 034–038` | Không |
 | `CustomerLoginTest` | `AEC_LOGIN_TC_003, 021, 022, 024, 038, 040` | Không |
 | `RegistrationTest` | `AEC_LOGIN_TC_004, 025, 026` — không tạo tài khoản (026 dùng email admin đã tồn tại) | Không (026 đọc `APP_USERNAME`) |

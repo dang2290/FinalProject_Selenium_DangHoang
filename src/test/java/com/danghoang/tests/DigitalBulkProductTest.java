@@ -1,9 +1,12 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
+import com.danghoang.pages.DashboardPage;
 import com.danghoang.pages.DigitalProductFormPage;
 import com.danghoang.pages.DigitalProductListPage;
+import com.danghoang.pages.FormField;
 import com.danghoang.pages.ProductBulkUploadPage;
-import com.danghoang.pages.ProductListPage;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
@@ -11,7 +14,6 @@ import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
 import org.testng.Assert;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -29,15 +31,11 @@ public class DigitalBulkProductTest extends ProductTestBase {
     @Description("Kiểm tra Products → Digital Products mở /admin/digitalproducts với tiêu đề Digital Products, nút Add New Digital Product, ô tìm; 9 cột đúng thứ tự; 10 dòng/trang có phân trang; nút Edit, Delete, Download.")
     public void testDigitalListElements() {
         tc("AEC_PROD_TC_004", "smoke", "product", "auth", "ui");
-        loginAsAdmin();
-        DigitalProductListPage list = new DigitalProductListPage(driver());
+        DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Bấm Products → Digital Products ở sidebar", () -> {
-            new ProductListPage(driver()).clickSidebar("/admin/digitalproducts");
-            list.waitUntilLoaded();
-        });
+        DigitalProductListPage list = act("Bấm Products → Digital Products ở sidebar", dashboard::goToDigitalProducts);
 
-        Allure.step("Assert: Bảng kiểm Digital Products", () -> {
+        verify("Bảng kiểm Digital Products", () -> {
             Assert.assertEquals(list.currentPath(), "/admin/digitalproducts", "Đường dẫn");
             Assert.assertTrue(list.isTitleDisplayed(), "Tiêu đề Digital Products");
             Assert.assertTrue(list.hasAddNewButton(), "Nút Add New Digital Product");
@@ -56,16 +54,16 @@ public class DigitalBulkProductTest extends ProductTestBase {
     public void testDigitalCreateFormElements() {
         tc("AEC_PROD_TC_005", "smoke", "product", "auth", "ui");
         loginAsAdmin();
-        DigitalProductFormPage form = Allure.step("Act: Mở Add New Digital Product", () -> new DigitalProductFormPage(driver()).openCreate());
+        DigitalProductFormPage form = act("Mở Add New Digital Product", () -> new DigitalProductFormPage().openCreate());
 
-        Allure.step("Assert: Bảng kiểm form", () -> {
+        verify("Bảng kiểm form", () -> {
             Assert.assertTrue(form.sectionTitles().containsAll(List.of("General", "Images", "Meta Tags", "Price", "Product Information")),
                     "Các khối: " + form.sectionTitles());
             Assert.assertTrue(form.fieldLabels().containsAll(List.of("Product Name", "Category", "Product File", "Tags", "Main Images",
                     "Thumbnail Image (290x300)", "Unit price", "Purchase price", "Tax", "Discount Date Range", "Discount")), "Các ô: " + form.fieldLabels());
-            Assert.assertFalse(form.hasField("current_stock"), "Không được có Quantity");
-            Assert.assertFalse(form.hasField("choice_attributes[]"), "Không được có Variation");
-            Assert.assertFalse(form.hasField("est_shipping_days"), "Không được có Shipping");
+            Assert.assertFalse(form.hasField(FormField.QUANTITY), "Không được có Quantity");
+            Assert.assertFalse(form.hasField(FormField.VARIATION_ATTRIBUTES), "Không được có Variation");
+            Assert.assertFalse(form.hasField(FormField.SHIPPING_DAYS), "Không được có Shipping");
             Assert.assertEquals(form.submitText(), "Save Product", "Nút lưu");
         });
     }
@@ -77,17 +75,14 @@ public class DigitalBulkProductTest extends ProductTestBase {
         tc("AEC_PROD_TC_011", "smoke", "product", "auth");
         String name = "AutoDig_" + newDigitalToken("TC011");
         loginAsAdmin();
-        DigitalProductFormPage form = new DigitalProductFormPage(driver()).openCreate();
+        DigitalProductFormPage form = new DigitalProductFormPage().openCreate();
 
-        Allure.step("Act: Nhập dữ liệu, bấm Save Product", () -> {
-            form.fillRequired(name, "10");
-            form.submitAndWait();
-        });
+        DigitalProductListPage list = act("Nhập dữ liệu rồi bấm Save Product", () -> form.createProduct(name, "10"));
 
-        Allure.step("Assert: Thêm thành công, sản phẩm ở đầu bảng, Base Price 10.00", () -> {
-            Assert.assertEquals(form.getNotifyMessage(), DIGITAL_INSERTED, "Thông báo sau khi lưu");
-            Assert.assertEquals(form.currentPath(), "/admin/digitalproducts", "Đường dẫn sau khi lưu");
-            DigitalProductListPage list = new DigitalProductListPage(driver()).waitUntilLoaded();
+        verify("Thêm thành công, sản phẩm ở đầu bảng, Base Price 10.00", () -> {
+            Assert.assertEquals(list.getNotifyMessage(), DIGITAL_INSERTED, "Thông báo sau khi lưu");
+            Assert.assertEquals(list.currentPath(), "/admin/digitalproducts", "Đường dẫn sau khi lưu");
+            list.waitUntilLoaded();
             int row = list.rowIndexOf(name);
             Assert.assertTrue(row >= 0 && row < TOP_ROWS, "Sản phẩm mới phải ở đầu bảng, thực tế dòng " + (row + 1));
             Assert.assertEquals(list.basePriceOfRow(row), "10.00", "Base Price");
@@ -100,14 +95,14 @@ public class DigitalBulkProductTest extends ProductTestBase {
     public void testDigitalWhitespaceNameRejected() {
         tc("AEC_PROD_TC_058", "regression", "product", "auth", "validation", "knownIssue");
         loginAsAdmin();
-        DigitalProductFormPage form = new DigitalProductFormPage(driver()).openCreate();
+        DigitalProductFormPage form = new DigitalProductFormPage().openCreate();
 
-        Allure.step("Act: Name toàn khoảng trắng, bấm Save Product", () -> {
+        act("Name toàn khoảng trắng rồi bấm Save Product", () -> {
             form.fillRequired("   ", "10");
-            form.submitAndWait();
+            form.saveAndWait();
         });
 
-        Allure.step("Assert: Báo Name bắt buộc, không trang lỗi", () -> {
+        verify("Báo Name bắt buộc, không trang lỗi", () -> {
             Assert.assertFalse(form.isServerErrorPage(), "Không được ra trang Something went wrong!");
             Assert.assertFalse(form.errorMessages().isEmpty(), "Phải có thông báo Name bắt buộc");
         });
@@ -120,28 +115,23 @@ public class DigitalBulkProductTest extends ProductTestBase {
         tc("AEC_PROD_TC_059", "regression", "product", "auth", "validation", "knownIssue");
         String name = "AutoDig_" + newDigitalToken("TC059");
         loginAsAdmin();
-        DigitalProductFormPage form = new DigitalProductFormPage(driver()).openCreate();
+        DigitalProductFormPage form = new DigitalProductFormPage().openCreate();
 
-        Allure.step("Act: Giá 10, Discount 20, bấm Save Product", () -> {
+        act("Giá 10, Discount 20 rồi bấm Save Product", () -> {
             form.fillRequired(name, "10");
-            form.enterField("discount", "20");
-            form.submitAndWait();
+            form.enterField(FormField.DISCOUNT, "20");
+            form.saveAndWait();
         });
 
-        Allure.step("Assert: Báo lỗi, không tạo sản phẩm", () -> {
+        verify(StepNames.REJECTED_NO_PRODUCT, () -> {
             Assert.assertFalse(form.errorMessages().isEmpty(), "Phải có khối lỗi về discount");
-            DigitalProductListPage list = new DigitalProductListPage(driver()).open();
-            list.search(name);
+            DigitalProductListPage list = new DigitalProductListPage();
+            list.searchFor(name);
             Assert.assertEquals(list.rowIndexOf(name), -1, "Không được có sản phẩm số mới");
         });
     }
 
-    @DataProvider(name = "digitalEditTabs", parallel = true)
-    public Object[][] digitalEditTabs() {
-        return new Object[][]{{"a", "English"}, {"b", "Vietnamese"}};
-    }
-
-    @Test(dataProvider = "digitalEditTabs", groups = {"regression", "product", "auth"}, description = "Sửa sản phẩm số 2 ngôn ngữ")
+    @Test(dataProvider = "languageTabs", dataProviderClass = DataProviderFactory.class, groups = {"regression", "product", "auth"}, description = "Sửa sản phẩm số 2 ngôn ngữ")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra ở Edit Digital Product, đổi Name ở tab English / Vietnamese rồi Update Product thì báo Digital Product has been updated successfully, ở lại trang, ô Name hiện tên mới.")
     public void testEditDigitalByTab(String variant, String tab) {
@@ -154,15 +144,14 @@ public class DigitalBulkProductTest extends ProductTestBase {
         createDigital(name);
         DigitalProductFormPage edit = openDigitalEditOf(name, name);
 
-        Allure.step("Act: Tab " + tab + ", đổi Name, bấm Update Product", () -> {
+        act("Tab " + tab + ", đổi Name, bấm Update Product", () -> {
             if (!"English".equals(tab)) {
                 edit.clickTab(tab);
             }
-            edit.enterName(newName);
-            edit.submitAndWait();
+            edit.saveWithName(newName);
         });
 
-        Allure.step("Assert: Cập nhật thành công, ở lại trang, tên mới", () -> {
+        verify("Cập nhật thành công, ở lại trang, tên mới", () -> {
             Assert.assertEquals(edit.getNotifyMessage(), DIGITAL_UPDATED, "Thông báo sau khi cập nhật");
             Assert.assertTrue(edit.isOnEditPage(), "Phải ở lại trang sửa: " + edit.currentUrl());
             Assert.assertEquals(edit.nameValue(), newName, "Ô Name");
@@ -177,18 +166,15 @@ public class DigitalBulkProductTest extends ProductTestBase {
         String name = "AutoDig_" + newDigitalToken("TC061");
         loginAsAdmin();
         createDigital(name);
-        DigitalProductListPage list = new DigitalProductListPage(driver()).open();
-        list.search(name);
+        DigitalProductListPage list = new DigitalProductListPage();
+        list.searchFor(name);
         String id = list.idOfRow(list.rowIndexOf(name));
         trackDigitalId(id);
         DigitalProductFormPage edit = list.editRow(list.rowIndexOf(name));
 
-        Allure.step("Act: Thay Name bằng khoảng trắng, bấm Update Product", () -> {
-            edit.enterName("   ");
-            edit.submitAndWait();
-        });
+        act("Thay Name bằng khoảng trắng rồi bấm Update Product", () -> edit.saveWithName("   "));
 
-        Allure.step("Assert: Báo Name bắt buộc, giữ tên cũ", () -> {
+        verify("Báo Name bắt buộc, giữ tên cũ", () -> {
             Assert.assertFalse(edit.errorMessages().isEmpty(), "Phải có thông báo Name bắt buộc");
             Assert.assertEquals(edit.openEdit(id, "en").nameValue(), name, "Ô Name");
         });
@@ -199,15 +185,11 @@ public class DigitalBulkProductTest extends ProductTestBase {
     @Description("Kiểm tra Products → Bulk Import mở /admin/product-bulk-upload/index với tiêu đề Product Bulk Upload, Step 1, Step 2, nút Download CSV, Download Category, Download Brand, khối Upload Product File, ô chọn tệp, nút Upload CSV.")
     public void testBulkUploadElements() {
         tc("AEC_PROD_TC_062", "regression", "product", "auth", "ui");
-        loginAsAdmin();
-        ProductBulkUploadPage bulk = new ProductBulkUploadPage(driver());
+        DashboardPage dashboard = loginAsAdmin();
 
-        Allure.step("Act: Bấm Products → Bulk Import ở sidebar", () -> {
-            new ProductListPage(driver()).clickSidebar("/admin/product-bulk-upload/index");
-            bulk.waitUntilLoaded();
-        });
+        ProductBulkUploadPage bulk = act("Bấm Products → Bulk Import ở sidebar", dashboard::goToBulkImport);
 
-        Allure.step("Assert: Bảng kiểm trang Bulk Upload", () -> {
+        verify("Bảng kiểm trang Bulk Upload", () -> {
             Assert.assertEquals(bulk.currentPath(), "/admin/product-bulk-upload/index", "Đường dẫn");
             Assert.assertEquals(bulk.sectionTitles(), List.of("Product Bulk Upload", "Upload Product File"), "Tiêu đề các khối");
             Assert.assertEquals(bulk.stepLabels(), List.of("Step 1:", "Step 2:"), "Các bước");
@@ -222,11 +204,11 @@ public class DigitalBulkProductTest extends ProductTestBase {
     public void testUploadWithoutFileBlocked() {
         tc("AEC_PROD_TC_063", "regression", "product", "auth", "validation");
         loginAsAdmin();
-        ProductBulkUploadPage bulk = Allure.step("Arrange: Mở Product Bulk Upload", () -> new ProductBulkUploadPage(driver()).open());
+        ProductBulkUploadPage bulk = arrange("Mở Product Bulk Upload", () -> new ProductBulkUploadPage().open());
 
-        Allure.step("Act: Bấm Upload CSV khi chưa chọn tệp", bulk::clickUpload);
+        act("Bấm Upload CSV khi chưa chọn tệp", bulk::clickUpload);
 
-        Allure.step("Assert: Không gửi, trình duyệt nhắc chọn tệp", () -> {
+        verify("Không gửi, trình duyệt nhắc chọn tệp", () -> {
             Assert.assertFalse(bulk.fileValidationMessage().isEmpty(), "Phải có bong bóng nhắc chọn tệp");
             Assert.assertTrue(bulk.isSamePageInstance(), "Không được gửi form");
         });

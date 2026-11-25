@@ -1,11 +1,10 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Actions;
 
 import java.util.List;
 
@@ -13,7 +12,7 @@ import java.util.List;
  * Form Category Information — tạo (/admin/categories/create) và sửa (/admin/categories/edit/{id}?lang=en|vn).
  * Form sửa có thêm 2 tab ngôn ngữ và ô Slug. Locator lấy từ DOM thật 03-11-2026.
  */
-public class CategoryFormPage extends BasePage {
+public class CategoryFormPage extends TranslatableFormPage {
 
     private static final String FORM = "//form[.//input[@name='name']]";
 
@@ -21,19 +20,19 @@ public class CategoryFormPage extends BasePage {
     private static final By FORM_LABELS = By.xpath(FORM + "//label");
     private static final By TRANSLATABLE_LABELS = By.xpath(FORM + "//label[i[contains(@class,'la-language')]]");
     private static final By TRANSLATABLE_ICON = By.xpath(FORM + "//label/i[contains(@class,'la-language')]");
-    private static final By LANGUAGE_TABS = By.cssSelector("a.nav-link[href*='/admin/categories/edit/']");
-    private static final By ACTIVE_TAB = By.cssSelector("a.nav-link.active[href*='/admin/categories/edit/']");
-    private static final By NAME_INPUT = By.id("name");
+    private static final By NAME_INPUT = AdminLocators.NAME_INPUT;
     private static final By ORDER_LEVEL_INPUT = By.id("order_level");
     private static final By ORDER_LEVEL_HINT = By.xpath(FORM + "//small[normalize-space()='Higher number has high priority']");
     private static final By META_TITLE_INPUT = By.xpath(FORM + "//input[@name='meta_title']");
     private static final By META_DESCRIPTION_INPUT = By.xpath(FORM + "//textarea[@name='meta_description']");
-    private static final By SLUG_INPUT = By.id("slug");
+    private static final By SLUG_INPUT = AdminLocators.SLUG_INPUT;
     private static final By SAVE_BUTTON = By.xpath(FORM + "//button[@type='submit']");
 
-    private final BootstrapSelect parent = new BootstrapSelect(driver, "parent_id");
-    private final BootstrapSelect type = new BootstrapSelect(driver, "digital");
-    private final BootstrapSelect attributes = new BootstrapSelect(driver, "filtering_attributes[]");
+    private static final By REMOVE_ATTACHMENT = By.cssSelector(".remove-attachment");
+
+    private final BootstrapSelect parent = new BootstrapSelect("parent_id");
+    private final BootstrapSelect type = new BootstrapSelect("digital");
+    private final BootstrapSelect attributes = new BootstrapSelect("filtering_attributes[]");
 
     /** Ô ảnh của form. */
     public enum ImageField {
@@ -50,8 +49,8 @@ public class CategoryFormPage extends BasePage {
         }
     }
 
-    public CategoryFormPage(WebDriver driver) {
-        super(driver);
+    public CategoryFormPage() {
+        super(PAGE_TITLE, NAME_INPUT, "/admin/categories/edit/");
     }
 
     @Step("Mở form tạo danh mục")
@@ -62,13 +61,18 @@ public class CategoryFormPage extends BasePage {
 
     @Step("Mở form sửa theo đường dẫn {url}")
     public CategoryFormPage openUrl(String url) {
-        driver.get(url);
+        WebUI.openURL(url);
         return waitUntilLoaded();
     }
 
+    @Override
+    protected void waitForForm() {
+        super.waitForForm();
+        WebUI.waitForElementVisible(NAME_INPUT);
+    }
+
     public CategoryFormPage waitUntilLoaded() {
-        waitForVisible(PAGE_TITLE);
-        waitForVisible(NAME_INPUT);
+        waitForForm();
         return this;
     }
 
@@ -80,77 +84,44 @@ public class CategoryFormPage extends BasePage {
         return currentPath().startsWith("/admin/categories/edit/");
     }
 
-    public boolean isTitleDisplayed() {
-        return isPresentNow(PAGE_TITLE);
-    }
-
     public List<String> labels() {
-        return driver.findElements(FORM_LABELS).stream().map(e -> e.getText().trim()).toList();
+        return WebUI.getAllElementsText(FORM_LABELS);
     }
 
     /** Nhãn có biểu tượng ngôn ngữ (trường dịch được). */
     public List<String> translatableLabels() {
-        return driver.findElements(TRANSLATABLE_LABELS).stream().map(e -> e.getText().trim()).toList();
+        return WebUI.getAllElementsText(TRANSLATABLE_LABELS);
     }
 
     /** Chú thích của biểu tượng ngôn ngữ cạnh nhãn Name (hiện khi rê chuột). */
     public String translatableTooltip() {
-        WebElement icon = driver.findElement(TRANSLATABLE_ICON);
-        new Actions(driver).moveToElement(icon).perform();
-        return icon.getAttribute("title");
-    }
-
-    // ---------- Tab ngôn ngữ (form sửa) ----------
-
-    public List<String> languageTabs() {
-        return driver.findElements(LANGUAGE_TABS).stream().map(e -> e.getText().trim()).toList();
-    }
-
-    public String activeTab() {
-        return getText(ACTIVE_TAB);
-    }
-
-    @Step("Chọn tab ngôn ngữ {tab}")
-    public void clickTab(String tab) {
-        WebElement target = driver.findElements(LANGUAGE_TABS).stream()
-                .filter(e -> e.getText().trim().equals(tab)).findFirst()
-                .orElseThrow(() -> new IllegalStateException("Không có tab " + tab));
-        andWaitForNewPage(target::click);
-        waitUntilLoaded();
+        return WebUI.getTooltipOnHover(WebUI.getWebElement(TRANSLATABLE_ICON), "biểu tượng ngôn ngữ");
     }
 
     // ---------- Đọc giá trị ----------
 
-    public String nameValue() {
-        return driver.findElement(NAME_INPUT).getAttribute("value");
-    }
-
     public String orderLevelValue() {
-        return driver.findElement(ORDER_LEVEL_INPUT).getAttribute("value");
+        return WebUI.getElementValue(ORDER_LEVEL_INPUT);
     }
 
     public String orderLevelPlaceholder() {
-        return driver.findElement(ORDER_LEVEL_INPUT).getAttribute("placeholder");
+        return WebUI.getElementAttribute(ORDER_LEVEL_INPUT, "placeholder");
     }
 
     public boolean isOrderLevelHintShown() {
-        return isPresentNow(ORDER_LEVEL_HINT);
+        return WebUI.isElementDisplayedNow(ORDER_LEVEL_HINT);
     }
 
     public String metaTitleValue() {
-        return driver.findElement(META_TITLE_INPUT).getAttribute("value");
+        return WebUI.getElementValue(META_TITLE_INPUT);
     }
 
     public String metaDescriptionValue() {
-        return driver.findElement(META_DESCRIPTION_INPUT).getAttribute("value");
+        return WebUI.getElementValue(META_DESCRIPTION_INPUT);
     }
 
     public String slugValue() {
-        return driver.findElement(SLUG_INPUT).getAttribute("value");
-    }
-
-    public boolean hasSlugField() {
-        return isPresentNow(SLUG_INPUT);
+        return WebUI.getElementValue(SLUG_INPUT);
     }
 
     public String parentShown() {
@@ -174,27 +145,24 @@ public class CategoryFormPage extends BasePage {
     }
 
     public String browseText(ImageField field) {
-        return driver.findElement(By.xpath(field.uploader() + "//div[contains(@class,'input-group-text')]")).getText().trim();
+        return WebUI.getElementTextNow(browseButton(field));
     }
 
     public String fileAmountText(ImageField field) {
-        return driver.findElement(By.xpath(field.uploader() + "//div[contains(@class,'file-amount')]")).getText().trim();
+        return WebUI.getElementTextNow(fileAmount(field));
     }
 
-    /**
-     * Số ảnh xem trước của ô. Ở form sửa, ảnh xem trước được dựng bằng AJAX sau khi trang tải xong —
-     * ô đã có id ảnh thì chờ ảnh dựng xong rồi mới đếm.
-     */
+    /** Số ảnh xem trước của ô; ô đã có id ảnh thì chờ ảnh dựng xong rồi mới đếm. */
     public int previewCount(ImageField field) {
-        String imageId = driver.findElement(imageInput(field)).getAttribute("value");
-        if (imageId != null && !imageId.isBlank()) {
-            try {
-                wait.until(d -> !d.findElements(previewItems(field)).isEmpty());
-            } catch (org.openqa.selenium.TimeoutException e) {
-                log.warn("Ô {} có id {} nhưng không dựng được ảnh xem trước", field, imageId);
-            }
-        }
-        return driver.findElements(previewItems(field)).size();
+        return previewCountWhenReady(WebUI.getElementValue(imageInput(field)), previewItems(field));
+    }
+
+    private By browseButton(ImageField field) {
+        return By.xpath(field.uploader() + "//div[contains(@class,'input-group-text')]");
+    }
+
+    private By fileAmount(ImageField field) {
+        return By.xpath(field.uploader() + "//div[contains(@class,'file-amount')]");
     }
 
     private By imageInput(ImageField field) {
@@ -207,56 +175,43 @@ public class CategoryFormPage extends BasePage {
     }
 
     public boolean isSaveDisplayed() {
-        return isPresentNow(SAVE_BUTTON);
-    }
-
-    public String nameValidationMessage() {
-        return validationMessage(NAME_INPUT);
+        return WebUI.isElementDisplayedNow(SAVE_BUTTON);
     }
 
     public String orderLevelValidationMessage() {
-        return validationMessage(ORDER_LEVEL_INPUT);
-    }
-
-    public boolean isNameFocused() {
-        return driver.switchTo().activeElement().equals(driver.findElement(NAME_INPUT));
-    }
-
-    /** Trang 419 PAGE EXPIRED — gửi form khi phiên đã hết. */
-    public boolean isPageExpired() {
-        return driver.getTitle().contains("Page Expired") || driver.getPageSource().contains("419");
+        return WebUI.getValidationMessage(ORDER_LEVEL_INPUT);
     }
 
     // ---------- Nhập liệu ----------
 
     @Step("Nhập Name: {name}")
     public void enterName(String name) {
-        clearAndType(NAME_INPUT, name);
+        WebUI.replaceText(NAME_INPUT, name);
     }
 
     @Step("Xoá hết ô Name")
     public void clearName() {
-        clearAndType(NAME_INPUT, "");
+        WebUI.replaceText(NAME_INPUT, "");
     }
 
     @Step("Nhập Ordering Number: {value}")
     public void enterOrderLevel(String value) {
-        clearAndType(ORDER_LEVEL_INPUT, value);
+        WebUI.replaceText(ORDER_LEVEL_INPUT, value);
     }
 
     @Step("Nhập Meta Title: {metaTitle}")
     public void enterMetaTitle(String metaTitle) {
-        clearAndType(META_TITLE_INPUT, metaTitle);
+        WebUI.replaceText(META_TITLE_INPUT, metaTitle);
     }
 
     @Step("Nhập Meta description")
     public void enterMetaDescription(String metaDescription) {
-        clearAndType(META_DESCRIPTION_INPUT, metaDescription);
+        WebUI.replaceText(META_DESCRIPTION_INPUT, metaDescription);
     }
 
     @Step("Đặt Slug: {slug}")
     public void enterSlug(String slug) {
-        clearAndType(SLUG_INPUT, slug);
+        WebUI.replaceText(SLUG_INPUT, slug);
     }
 
     @Step("Chọn Parent Category: {name}")
@@ -311,21 +266,22 @@ public class CategoryFormPage extends BasePage {
 
     @Step("Mở thư viện tệp của ô {field}")
     public MediaLibraryModal openLibrary(ImageField field) {
-        click(By.xpath(field.uploader() + "//div[contains(@class,'input-group-text')]"));
-        return new MediaLibraryModal(driver).waitUntilOpen();
+        WebUI.clickElement(browseButton(field));
+        return new MediaLibraryModal().waitUntilOpen();
     }
 
     @Step("Bấm nút xoá (×) trên ảnh xem trước của ô {field}")
     public void removePreview(ImageField field) {
-        WebElement item = driver.findElement(previewItems(field));
-        item.findElement(By.cssSelector(".remove-attachment")).click();
-        wait.until(d -> d.findElements(previewItems(field)).isEmpty());
+        WebElement item = WebUI.getWebElement(previewItems(field));
+        WebUI.clickElement(WebUI.getWebElement(item, REMOVE_ATTACHMENT), "× của ảnh " + field);
+        WebUI.waitUntil("ảnh xem trước biến mất", () -> !WebUI.checkElementExist(previewItems(field)));
     }
 
     /** Bấm Save — không chờ gì (dùng khi trình duyệt có thể chặn form). */
     @Step("Bấm Save")
     public void clickSave() {
-        driver.findElement(SAVE_BUTTON).click();
+        markPage();
+        WebUI.clickElementNow(SAVE_BUTTON);
     }
 
     @Step("Bấm Save và chờ trang tải lại")
@@ -335,27 +291,30 @@ public class CategoryFormPage extends BasePage {
 
     @Step("Bấm đúp nút Save")
     public void doubleClickSave() {
-        andWaitForNewPage(() -> new Actions(driver).doubleClick(waitForVisible(SAVE_BUTTON)).perform());
+        andWaitForNewPage(() -> WebUI.doubleClickElement(SAVE_BUTTON));
     }
 
     @Step("Nhấn Tab {count} lần từ ô Name")
     public List<String> tabSequenceFromName(int count) {
-        return tabSequenceFrom(NAME_INPUT, count);
+        return WebUI.tabSequenceFrom(NAME_INPUT, count);
     }
 
     /** Ô nhập chữ nào trông giống hệt nhau khi đang focus và khi không focus. */
     @Step("Đối chiếu viền của các ô nhập chữ khi đang focus")
     public List<String> fieldsWithoutVisibleFocus() {
-        return fieldsWithoutVisibleFocus(List.of(NAME_INPUT, ORDER_LEVEL_INPUT, META_TITLE_INPUT, META_DESCRIPTION_INPUT),
+        return WebUI.fieldsWithoutVisibleFocus(List.of(NAME_INPUT, ORDER_LEVEL_INPUT, META_TITLE_INPUT, META_DESCRIPTION_INPUT),
                 List.of("Name", "Ordering Number", "Meta Title", "Meta description"));
     }
 
-    /** Ô đã có sẵn giá trị: chọn hết rồi gõ đè (clear() không phát sự kiện bàn phím). */
-    private void clearAndType(By locator, String value) {
-        WebElement field = waitForVisible(locator);
-        field.sendKeys(Keys.chord(Keys.CONTROL, "a"), Keys.DELETE);
-        if (!value.isEmpty()) {
-            type(locator, value);
-        }
+    /** Đặt Slug rồi lưu, chờ trang tải lại. */
+    public void saveWithSlug(String slug) {
+        enterSlug(slug);
+        saveAndWait();
+    }
+
+    /** Tạo danh mục hợp lệ: lưu xong hệ thống chuyển về All categories. Dữ liệu sai thì dùng saveWithName. */
+    public CategoryListPage createCategory(String name) {
+        saveWithName(name);
+        return arrivedAt(new CategoryListPage());
     }
 }

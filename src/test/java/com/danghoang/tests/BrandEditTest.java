@@ -1,5 +1,7 @@
 package com.danghoang.tests;
 
+import com.danghoang.base.StepNames;
+import com.danghoang.dataproviders.DataProviderFactory;
 import com.danghoang.pages.BrandEditPage;
 import com.danghoang.pages.BrandPage;
 import io.qameta.allure.Allure;
@@ -35,9 +37,9 @@ public class BrandEditTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
 
-        BrandEditPage editPage = Allure.step("Act: Tìm brand test, bấm nút bút chì", () -> openEditOf(brandPage, name));
+        BrandEditPage editPage = act("Tìm brand test, bấm nút bút chì", () -> openEditOf(brandPage, name));
 
-        Allure.step("Assert: Bảng kiểm thành phần màn Brand Information", () -> {
+        verify("Bảng kiểm thành phần màn Brand Information", () -> {
             Assert.assertEquals(editPage.languageTabs(), List.of("English", "Vietnamese"), "(REQ-22) Hai tab ngôn ngữ");
             Assert.assertEquals(editPage.activeTab(), "English", "(REQ-22) Tab đang chọn");
             Assert.assertEquals(editPage.formLabels(), List.of("Name", "Logo (120x80)", "Meta Title", "Meta description", "Slug"),
@@ -49,7 +51,7 @@ public class BrandEditTest extends BrandTestBase {
             Assert.assertTrue(editPage.isSlugEditable(), "(REQ-25) Ô Slug phải sửa được");
         });
 
-        Allure.step("Assert: Rê chuột lên biểu tượng cạnh Name hiện Translatable", () ->
+        verify(StepNames.TRANSLATABLE_HINT, () ->
                 Assert.assertEquals(editPage.translatableTooltip(), "Translatable", "Chú thích biểu tượng ngôn ngữ"));
     }
 
@@ -62,29 +64,21 @@ public class BrandEditTest extends BrandTestBase {
         BrandPage brandPage = openBrandsAsAdmin();
         createBrand(brandPage, name);
 
-        Allure.step("Act: Tìm brand test", () -> {
-            brandPage.open();
-            brandPage.search(name);
-        });
+        act("Tìm brand test", () -> brandPage.searchFor(name));
 
-        Allure.step("Assert: Rê chuột lên nút bút chì hiện Edit", () ->
+        verify("Rê chuột lên nút bút chì hiện Edit", () ->
                 Assert.assertEquals(brandPage.editTooltipOfFirstRow(), "Edit", "Chú thích nút bút chì"));
 
-        BrandEditPage editPage = Allure.step("Act: Bấm nút bút chì", brandPage::editFirstResult);
+        BrandEditPage editPage = act(StepNames.CLICK_EDIT, brandPage::editFirstResult);
 
-        Allure.step("Assert: Mở đúng form sửa của brand test", () -> {
+        verify("Mở đúng form sửa của brand test", () -> {
             Assert.assertTrue(editPage.currentUrl().matches(EDIT_URL_PATTERN), "Đường dẫn form sửa: " + editPage.currentUrl());
             Assert.assertEquals(editPage.activeTab(), "English", "Tab đang chọn");
             Assert.assertEquals(editPage.nameValue(), name, "Ô Name");
         });
     }
 
-    @DataProvider(name = "languageTabs", parallel = true)
-    public Object[][] languageTabs() {
-        return new Object[][]{{"a", "English"}, {"b", "Vietnamese"}};
-    }
-
-    @Test(dataProvider = "languageTabs", groups = {"regression", "brand", "auth", "validation"},
+    @Test(dataProvider = "languageTabs", dataProviderClass = DataProviderFactory.class, groups = {"regression", "brand", "auth", "validation"},
             description = "Không lưu được chỉnh sửa khi Name để trống")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Kiểm tra ở tab English và Vietnamese, xoá hết Name rồi Save thì trình duyệt chặn, trang không tải lại và brand vẫn mang tên cũ.")
@@ -96,24 +90,22 @@ public class BrandEditTest extends BrandTestBase {
         createBrand(brandPage, name);
         BrandEditPage editPage = openEditOf(brandPage, name);
 
-        Allure.step("Act: Chọn tab " + tab + ", xoá hết Name, bấm Save", () -> {
+        act("Chọn tab " + tab + ", xoá hết Name, bấm Save", () -> {
             if (!tab.equals(editPage.activeTab())) {
                 editPage.clickTab(tab);
             }
             editPage.clearName();
-            editPage.markPage();
             editPage.clickSave();
         });
 
-        Allure.step("Assert: Trình duyệt chặn, trang không tải lại", () -> {
+        verify("Trình duyệt chặn, trang không tải lại", () -> {
             Assert.assertFalse(editPage.nameValidationMessage().isEmpty(), "Phải có cảnh báo dưới ô Name");
             Assert.assertTrue(editPage.isSamePageInstance(), "Trang không được tải lại");
         });
 
-        Allure.step("Assert: Brand vẫn mang tên cũ", () -> {
-            brandPage.open();
-            brandPage.search(name);
-            Assert.assertEquals(brandPage.getResultNames(), List.of(name), "Tên brand không được đổi");
+        verify("Brand vẫn mang tên cũ", () -> {
+            brandPage.searchFor(name);
+            Assert.assertEquals(brandPage.names(), List.of(name), "Tên brand không được đổi");
         });
     }
 
@@ -129,33 +121,31 @@ public class BrandEditTest extends BrandTestBase {
         createBrand(brandPage, name);
         BrandEditPage editPage = openEditOf(brandPage, name);
 
-        Allure.step("Act: Bấm tab Vietnamese", () -> editPage.clickTab("Vietnamese"));
+        act(StepNames.CLICK_VIETNAMESE_TAB, () -> editPage.clickTab("Vietnamese"));
 
-        Allure.step("Assert: Đường dẫn ?lang=vn, tab Vietnamese được chọn", () -> {
+        verify("Đường dẫn ?lang=vn, tab Vietnamese được chọn", () -> {
             Assert.assertTrue(editPage.currentUrl().endsWith("lang=vn"), "Đường dẫn: " + editPage.currentUrl());
             Assert.assertEquals(editPage.activeTab(), "Vietnamese", "Tab đang chọn");
         });
 
-        Allure.step("Act: Nhập Name tiếng Việt rồi Save", () -> {
-            editPage.enterName(vietnameseName);
-            editPage.saveAndWait();
+        act("Nhập Name tiếng Việt rồi bấm Save", () -> {
+            editPage.saveWithName(vietnameseName);
             Assert.assertEquals(editPage.getNotifyMessage(), UPDATED, "Lưu tab Vietnamese phải thành công");
         });
 
-        Allure.step("Assert: Tab Vietnamese hiện tên tiếng Việt", () -> {
+        verify("Tab Vietnamese hiện tên tiếng Việt", () -> {
             editPage.clickTab("Vietnamese");
             Assert.assertEquals(editPage.nameValue(), vietnameseName, "Name ở tab Vietnamese");
         });
 
-        Allure.step("Assert: Tab English vẫn là tên gốc", () -> {
+        verify("Tab English vẫn là tên gốc", () -> {
             editPage.clickTab("English");
             Assert.assertEquals(editPage.nameValue(), name, "Name ở tab English");
         });
 
-        Allure.step("Assert: Danh sách vẫn hiện tên gốc", () -> {
-            brandPage.open();
-            brandPage.search(name);
-            Assert.assertEquals(brandPage.getResultNames(), List.of(name), "Tên ở danh sách");
+        verify("Danh sách vẫn hiện tên gốc", () -> {
+            brandPage.searchFor(name);
+            Assert.assertEquals(brandPage.names(), List.of(name), "Tên ở danh sách");
         });
     }
 
@@ -170,14 +160,14 @@ public class BrandEditTest extends BrandTestBase {
         createBrand(brandPage, name);
         BrandEditPage editPage = openEditOf(brandPage, name);
 
-        Allure.step("Act: Tab Vietnamese — nhập Meta Title rồi Save", () -> {
+        act("Tab Vietnamese — nhập Meta Title rồi bấm Save", () -> {
             editPage.clickTab("Vietnamese");
             editPage.enterMetaTitle(metaTitle);
             editPage.saveAndWait();
             Assert.assertEquals(editPage.getNotifyMessage(), UPDATED, "Lưu phải thành công");
         });
 
-        Allure.step("Assert: Tab English hiện cùng Meta Title", () -> {
+        verify("Tab English hiện cùng Meta Title", () -> {
             editPage.clickTab("English");
             Assert.assertEquals(editPage.metaTitleValue(), metaTitle, "Meta Title ở tab English");
         });
@@ -202,15 +192,14 @@ public class BrandEditTest extends BrandTestBase {
         createBrand(brandPage, name);
         BrandEditPage editPage = openEditOf(brandPage, name);
 
-        Allure.step("Act: Đặt Slug rồi Save", () -> {
-            editPage.enterSlug(slug);
-            editPage.saveAndWait();
+        act("Đặt Slug rồi bấm Save", () -> {
+            editPage.saveWithSlug(slug);
             Assert.assertEquals(editPage.getNotifyMessage(), UPDATED, "Lưu phải thành công");
         });
 
         BrandEditPage reopened = openEditOf(brandPage, name);
 
-        Allure.step("Assert: Slug sau khi mở lại form sửa", () -> {
+        verify("Slug sau khi mở lại form sửa", () -> {
             if (customSlug) {
                 Assert.assertEquals(reopened.slugValue(), slug, "Slug tự đặt phải được giữ");
             } else {
@@ -233,21 +222,19 @@ public class BrandEditTest extends BrandTestBase {
         createBrand(brandPage, brandA);
         createBrand(brandPage, brandB);
 
-        Allure.step("Act: Đặt Slug cho brand A rồi Save", () -> {
+        act("Đặt Slug cho brand A rồi bấm Save", () -> {
             BrandEditPage editA = openEditOf(brandPage, brandA);
-            editA.enterSlug(slug);
-            editA.saveAndWait();
+            editA.saveWithSlug(slug);
             Assert.assertEquals(editA.getNotifyMessage(), UPDATED, "Lưu brand A phải thành công");
         });
 
-        Allure.step("Act: Đặt cùng Slug cho brand B rồi Save", () -> {
+        act("Đặt cùng Slug cho brand B rồi bấm Save", () -> {
             BrandEditPage editB = openEditOf(brandPage, brandB);
-            editB.enterSlug(slug);
-            editB.saveAndWait();
+            editB.saveWithSlug(slug);
             Assert.assertFalse(editB.isServerErrorPage(), "Không được ra trang lỗi máy chủ");
         });
 
-        Allure.step("Assert: Slug của brand B khác Slug của brand A", () -> {
+        verify("Slug của brand B khác Slug của brand A", () -> {
             Assert.assertEquals(openEditOf(brandPage, brandA).slugValue(), slug, "Slug brand A");
             Assert.assertNotEquals(openEditOf(brandPage, brandB).slugValue(), slug, "Brand B không được dùng chung Slug với A");
         });
@@ -260,12 +247,12 @@ public class BrandEditTest extends BrandTestBase {
         tc("AEC_BRAND_TC_042", "regression", "brand", "auth");
         Allure.parameter("Biến thể", "a — id 999999999");
         loginAsAdmin();
-        BrandEditPage editPage = new BrandEditPage(driver());
+        BrandEditPage editPage = new BrandEditPage();
 
-        Allure.step("Act: Mở /admin/brands/edit/999999999?lang=en", () ->
+        act("Mở /admin/brands/edit/999999999?lang=en", () ->
                 editPage.openPath("/admin/brands/edit/999999999?lang=en"));
 
-        Allure.step("Assert: Trang Page Not Found!, không có form sửa", () -> {
+        verify("Trang Page Not Found!, không có form sửa", () -> {
             Assert.assertTrue(editPage.isNotFoundPage(), "Phải hiện Page Not Found!");
             Assert.assertFalse(editPage.isFormDisplayed(), "Không được hiện form sửa");
         });
@@ -282,16 +269,15 @@ public class BrandEditTest extends BrandTestBase {
         createBrand(brandPage, name);
         String editUrl = openEditOf(brandPage, name).currentUrl();
 
-        Allure.step("Arrange: Xoá brand test", () -> {
-            brandPage.open();
-            brandPage.search(name);
+        arrange("Xoá brand test", () -> {
+            brandPage.searchFor(name);
             brandPage.deleteFirstResult();
         });
 
-        BrandEditPage editPage = new BrandEditPage(driver());
-        Allure.step("Act: Mở lại đường dẫn sửa đã ghi", () -> browser().openUrl(editUrl));
+        BrandEditPage editPage = new BrandEditPage();
+        act("Mở lại đường dẫn sửa đã ghi", () -> browser().openUrl(editUrl));
 
-        Allure.step("Assert: Trang Page Not Found!, không có form sửa", () -> {
+        verify("Trang Page Not Found!, không có form sửa", () -> {
             Assert.assertTrue(editPage.isNotFoundPage(), "Phải hiện Page Not Found!");
             Assert.assertFalse(editPage.isFormDisplayed(), "Không được hiện form sửa");
         });

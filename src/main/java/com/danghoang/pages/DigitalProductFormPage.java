@@ -1,10 +1,9 @@
 package com.danghoang.pages;
 
+import com.danghoang.keywords.WebUI;
+
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 
 import java.util.List;
 
@@ -12,25 +11,25 @@ import java.util.List;
  * Form Add New Digital Product /admin/digitalproducts/create (nút Save Product) và Edit Digital Product
  * /admin/digitalproducts/edit/{id}?lang=en|vn (tab ngôn ngữ, nút Update Product). Locator lấy từ DOM thật 04-11-2026.
  */
-public class DigitalProductFormPage extends BasePage {
+public class DigitalProductFormPage extends TranslatableFormPage {
 
+    /** JS: chữ mọi label trong form, gộp khoảng trắng, bỏ trùng và bỏ rỗng. */
+    private static final String JS_UNIQUE_LABELS = "return [...new Set([...arguments[0].querySelectorAll('label')]"
+            + ".map(l => l.textContent.replace(/\\s+/g,' ').trim()).filter(t => t))];";
     private static final By CREATE_TITLE = By.xpath("//h5[normalize-space()='Add New Digital Product']");
     private static final By EDIT_TITLE = By.xpath("//h5[normalize-space()='Edit Digital Product']");
     private static final By FORM = By.xpath("//form[.//input[@name='name']][.//button[@type='submit']]");
     private static final By NAME_INPUT = By.xpath("//form//input[@name='name']");
     private static final By SUBMIT = By.xpath("//form[.//input[@name='name']]//button[@type='submit']");
-    private static final By TAG_INPUT = By.cssSelector("tags.tagify .tagify__input");
-    private static final By LANGUAGE_TABS = By.cssSelector("a.nav-link[href*='lang=']");
-    private static final By ACTIVE_TAB = By.cssSelector("a.nav-link.active[href*='lang=']");
 
-    public DigitalProductFormPage(WebDriver driver) {
-        super(driver);
+    public DigitalProductFormPage() {
+        super(EDIT_TITLE, NAME_INPUT, "lang=");
     }
 
     @Step("Mở Add New Digital Product")
     public DigitalProductFormPage openCreate() {
         navigate("/admin/digitalproducts/create");
-        waitForVisible(CREATE_TITLE);
+        WebUI.waitForElementVisible(CREATE_TITLE);
         return this;
     }
 
@@ -41,85 +40,44 @@ public class DigitalProductFormPage extends BasePage {
     }
 
     public DigitalProductFormPage waitUntilEditLoaded() {
-        waitForVisible(EDIT_TITLE);
+        waitForForm();
         return this;
     }
 
-    public boolean isCreateTitleDisplayed() {
-        return isPresentNow(CREATE_TITLE);
-    }
-
+    /** Form này có hai tiêu đề (tạo / sửa) — tiêu đề của lớp cha là tiêu đề trang sửa. */
     public boolean isEditTitleDisplayed() {
-        return isPresentNow(EDIT_TITLE);
+        return isTitleDisplayed();
     }
 
     public boolean isOnEditPage() {
         return currentPath().startsWith("/admin/digitalproducts/edit/");
     }
 
-    @SuppressWarnings("unchecked")
-    public List<String> sectionTitles() {
-        return (List<String>) js("return [...document.querySelectorAll('.card > .card-header > h5')].map(h => h.textContent.trim());");
-    }
-
     /** Nhãn mọi ô của form (bỏ trùng, theo thứ tự). */
     @SuppressWarnings("unchecked")
     public List<String> fieldLabels() {
-        return (List<String>) js("return [...new Set([...arguments[0].querySelectorAll('label')]"
-                + ".map(l => l.textContent.replace(/\\s+/g,' ').trim()).filter(t => t))];", driver.findElement(FORM));
+        return (List<String>) WebUI.executeJS(JS_UNIQUE_LABELS, WebUI.getWebElement(FORM));
     }
 
-    public boolean hasField(String name) {
-        return !driver.findElements(By.name(name)).isEmpty();
+    public boolean hasField(FormField field) {
+        return WebUI.checkElementExist(field.locator());
     }
 
     public String submitText() {
-        return driver.findElement(SUBMIT).getText().trim();
+        return WebUI.getElementTextNow(SUBMIT);
     }
 
-    public List<String> languageTabs() {
-        return driver.findElements(LANGUAGE_TABS).stream().map(e -> e.getText().trim()).toList();
+    @Step("Nhập {field}: [{value}]")
+    public void enterField(FormField field, String value) {
+        WebUI.scrollAndSetText(inputInForm(field), value);
     }
 
-    public String activeTab() {
-        return getText(ACTIVE_TAB);
-    }
-
-    @Step("Chọn tab ngôn ngữ {tab}")
-    public void clickTab(String tab) {
-        WebElement target = driver.findElements(LANGUAGE_TABS).stream()
-                .filter(e -> e.getText().trim().equals(tab)).findFirst()
-                .orElseThrow(() -> new IllegalStateException("Không có tab " + tab));
-        andWaitForNewPage(target::click);
-        waitUntilEditLoaded();
-    }
-
-    public String nameValue() {
-        return driver.findElement(NAME_INPUT).getAttribute("value");
-    }
-
-    @Step("Nhập {name}: [{value}]")
-    public void enterField(String name, String value) {
-        By locator = By.xpath("//form//input[@name='" + name + "']");
-        WebElement field = driver.findElement(locator);
-        js("arguments[0].scrollIntoView({block:'center'});", field);
-        field.clear();
-        if (!value.isEmpty()) {
-            type(locator, value);
-        }
+    private By inputInForm(FormField field) {
+        return By.xpath("//form//input[@name='" + field + "']");
     }
 
     public void enterName(String name) {
-        enterField("name", name);
-    }
-
-    @Step("Thêm tag {tag}")
-    public void addTag(String tag) {
-        WebElement input = driver.findElement(TAG_INPUT);
-        js("arguments[0].scrollIntoView({block:'center'});", input);
-        input.click();
-        input.sendKeys(tag, Keys.ENTER);
-        wait.until(d -> !d.findElements(By.cssSelector("tags.tagify tag")).isEmpty());
+        enterField(FormField.NAME, name);
     }
 
     /** PC-5: Name, Tags auto, Unit price, Purchase price 5, Discount 0 — Category để mặc định, không chọn tệp. */
@@ -127,25 +85,27 @@ public class DigitalProductFormPage extends BasePage {
     public void fillRequired(String name, String unitPrice) {
         enterName(name);
         addTag("auto");
-        enterField("unit_price", unitPrice);
-        enterField("purchase_price", "5");
-        enterField("discount", "0");
+        enterField(FormField.UNIT_PRICE, unitPrice);
+        enterField(FormField.PURCHASE_PRICE, "5");
+        enterField(FormField.DISCOUNT, "0");
     }
 
     @Step("Bấm {buttonText}")
     public void clickSubmit(String buttonText) {
-        WebElement button = driver.findElement(SUBMIT);
-        js("arguments[0].scrollIntoView({block:'center'});", button);
-        button.click();
+        markPage();
+        WebUI.scrollAndClickElement(SUBMIT);
     }
 
     @Step("Bấm nút lưu và chờ trang tải lại")
-    public void submitAndWait() {
+    public void saveAndWait() {
         String text = submitText();
         andWaitForNewPage(() -> clickSubmit(text));
     }
 
-    public List<String> errorMessages() {
-        return driver.findElements(By.cssSelector("div.alert-danger li")).stream().map(e -> e.getText().trim()).toList();
+    /** Tạo sản phẩm số hợp lệ: lưu xong hệ thống chuyển về Digital Products. */
+    public DigitalProductListPage createProduct(String name, String unitPrice) {
+        fillRequired(name, unitPrice);
+        saveAndWait();
+        return arrivedAt(new DigitalProductListPage());
     }
 }
